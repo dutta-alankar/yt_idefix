@@ -236,11 +236,11 @@ class IdefixDmpHierarchy(IdefixHierarchy):
         )
 
 class PlutoXdmfHierarchy(IdefixHierarchy):
-    
+
     def _detect_output_fields(self):
         with h5py.File(self.index_filename, mode="r") as h5f:
             self.field_list = [("pluto_xdmf", "%s"%k) for k in h5f[list(h5f.keys())[0]+'/vars/']]
-    
+
     def _parse_grid_data(self, gridtxt):
         start = 10
         nx1 = int(gridtxt[start][:-1])
@@ -248,7 +248,7 @@ class PlutoXdmfHierarchy(IdefixHierarchy):
         nx2 = int(gridtxt[start][:-1])
         start = start + (nx2+1)
         nx3 = int(gridtxt[start][:-1])
-        
+
         start = 11
         cell_width1 = np.array([float(gridtxt[i].split()[-1])-float(gridtxt[i].split()[-2]) for i in range(start,start+nx1)])
         start = start + (nx1+1)
@@ -261,13 +261,13 @@ class PlutoXdmfHierarchy(IdefixHierarchy):
         assert self.num_grids == 1
         self.grids = np.empty(self.num_grids, dtype="object")
         for i in range(self.num_grids):
-            grid_file = os.path.join(os.path.dirname(self.index_filename), 'grid.out')        
+            grid_file = os.path.join(os.path.dirname(self.index_filename), 'grid.out')
             with open(grid_file, 'r') as gridtxt:
                 txt = gridtxt.readlines()
                 self._parse_grid_data(txt)
             g = self.grid(id=i, index=self, filename=self.index_filename, cell_widths=self._cell_widths,
                            level=self.grid_levels.flat[i], dims=self.grid_dimensions[i], )
-            
+
             g._prepare_grid()
             g._setup_dx()
             self.grids[i] = g
@@ -768,13 +768,13 @@ class PlutoXdmfDataset(PlutoVtkDataset):
     _required_header_keyword = "PLUTOXdmf"
     _default_definitions_header = "definitions.h"
     _default_inifile = "pluto.ini"
-    
-    def _parse_parameter_file(self): 
+
+    def _parse_parameter_file(self):
         data_file = self.parameter_filename
         grid_file = os.path.join(os.path.dirname(self.parameter_filename), 'grid.out')
         xmf_file  = self.parameter_filename[:-2]+'xmf'
-        out_file  = os.path.join(os.path.dirname(self.parameter_filename), self.parameter_filename[-6:]+'.out')        
-        self._default_inifile = os.path.join(os.path.dirname(self.parameter_filename), self._default_inifile)   
+        out_file  = os.path.join(os.path.dirname(self.parameter_filename), self.parameter_filename[-6:]+'.out')
+        self._default_inifile = os.path.join(os.path.dirname(self.parameter_filename), self._default_inifile)
         self._default_definitions_header = os.path.join(os.path.dirname(self.parameter_filename), self._default_definitions_header)
         with open(grid_file, 'r') as gridtxt:
             txt = gridtxt.readlines()
@@ -782,10 +782,10 @@ class PlutoXdmfDataset(PlutoVtkDataset):
             self.domain_right_edge = np.array([ float(txt[i].replace(',', '').replace('[','').replace(']','').split()[3]) for i in [6,7,8] ])
             self.dimensionality    = int(txt[4][-2])
             self.domain_dimensions = np.array([ int(txt[i].replace(',', '').replace('[','').replace(']','').split()[4]) for i in [6,7,8] ] [:self.dimensionality])
-            
+
             self.geometry = Geometry((txt[5].split()[-1]).lower())
-            
-        with open(out_file, 'r') as outttxt:   
+
+        with open(out_file, 'r') as outttxt:
             txt = outttxt.readlines()
             entry = int(os.path.basename(self.parameter_filename).replace('.flt.h5','').replace('data.','').replace('.dbl.h5',''))
             self.current_time =  float(txt[entry].split()[1])
@@ -794,10 +794,10 @@ class PlutoXdmfDataset(PlutoVtkDataset):
             while(search in txt[entry].split()):
                 self.ntracers += 1
                 search = 'tr%d'%(self.ntracers+1)
-        
+
         self.fluid_types += (self._dataset_type,)
         self.gamma = 5.0 / 3.0
-        self.mu = 0.61  
+        self.mu = 0.61
         self.storage_filename = self.parameter_filename
         self.refine_by = 1 # no mesh refinement
         self._periodicity = (True, True, True)
@@ -807,7 +807,7 @@ class PlutoXdmfDataset(PlutoVtkDataset):
         self.omega_lambda = 0.0
         self.omega_matter = 0.0
         self.hubble_constant = 0.0
-        
+
     def _set_code_unit_attributes(self):
         # This is where quantities are created that represent the various
         # on-disk units.  These are the defaults, but if they are listed
@@ -823,9 +823,9 @@ class PlutoXdmfDataset(PlutoVtkDataset):
         velocity_unit = None
         density_unit  = None
         magnetic_unit = None
-        
+
         if (os.path.exists(self._default_definitions_header):
-            with open(self._default_definitions_header, 'r') as deftxt:                
+            with open(self._default_definitions_header, 'r') as deftxt:
                 lines = deftxt.readlines()
                 for line in lines:
                     line = remove_comments(line)
@@ -835,7 +835,7 @@ class PlutoXdmfDataset(PlutoVtkDataset):
                         density_unit = line.split()[-1]
                     if 'UNIT_VELOCITY' in line:
                         velocity_unit = line.split()[-1]
-            
+
             constant_names = list(pluto_def_constants.keys())
             if length_unit:
                 try:
@@ -855,7 +855,7 @@ class PlutoXdmfDataset(PlutoVtkDataset):
                     density_unit = velocity_unit.replace('sqrt','np.sqrt')
                     density_unit = velocity_unit.replace('log','np.log')
                     density_unit = eval(density_unit)
-            if velocity_unit:    
+            if velocity_unit:
                 try:
                     velocity_unit = float(velocity_unit)
                 except ValueError:
@@ -864,9 +864,9 @@ class PlutoXdmfDataset(PlutoVtkDataset):
                     velocity_unit = velocity_unit.replace('sqrt','np.sqrt')
                     velocity_unit = velocity_unit.replace('log','np.log')
                     velocity_unit = eval(velocity_unit)
-            if (density_unit) and (length_unit) :    
+            if (density_unit) and (length_unit) :
                 mass_unit = density_unit*length_unit**3
-        
+
         if not length_unit:
             self.length_unit = self.quan(1.0, "AU")
         else:
@@ -876,7 +876,7 @@ class PlutoXdmfDataset(PlutoVtkDataset):
                 mp = pluto_def_constants['CONST_mp']
                 self.mass_unit = self.quan(self.quan(mp, "g/cm**3")*self.length_unit**3/self.quan(1.0,"Msun"),"Msun")
             else:
-               self.mass_unit = self.quan(self.quan(density_unit, "g/cm**3")*self.length_unit**3/self.quan(1.0,"Msun"),"Msun") 
+               self.mass_unit = self.quan(self.quan(density_unit, "g/cm**3")*self.length_unit**3/self.quan(1.0,"Msun"),"Msun")
         else:
             self.mass_unit = self.quan(mass_unit, "g")
         if not velocity_unit:
@@ -889,7 +889,7 @@ class PlutoXdmfDataset(PlutoVtkDataset):
             magnetic_unit = self.quan(1.0, "gauss")
         else:
             self.magnetic_unit = self.quan(magnetic_unit, "gauss")
-            
+
         for key, unit in self.__class__.default_units.items():
             setdefaultattr(self, key, self.quan(1, unit))
 
