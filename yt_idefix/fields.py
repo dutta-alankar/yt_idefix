@@ -47,3 +47,196 @@ class IdefixDmpFields(FieldInfoContainer):
         setup_magnetic_field_aliases(
             self, "idefix-dmp", [f"Vc-BX{idir}" for idir in "123"]
         )
+
+class PlutoXdmfFieldInfo(FieldInfoContainer):
+    _pres_units = "code_pressure"
+    _erg_units = "code_mass * (code_length/code_time)**2"
+    _rho_units = "code_mass / code_length**3"
+    _mom_units = "code_mass / code_length**2 / code_time"
+    _vel_units = "code_length/code_time"
+
+    known_other_fields: KnownFieldsT = (
+        # Each entry here is of the form
+        # ( "name", ("units", ["fields", "to", "alias"], # "display_name")),
+        ("rho", (self._rho_units, ["density", "rho"], None)),
+        ("vx1", (self._vel_units, ["vel_x"], None)),
+        ("vx2", (self._vel_units, ["vel_y"], None)),
+        ("vx3", (self._vel_units, ["vel_z"], None)),
+        ("prs", (self._pres_units, ["prs", "pres", "pressure"], None)),
+    )
+
+    known_particle_fields = ()
+    
+    def setup_fluid_fields(self):
+        unit_system = self.ds.unit_system
+        
+        # Add tracer fields
+        for i in range(1, self.ds.ntracers+1):
+            if (self.ds._dataset_type, "tr%d"%i) in self.field_list:
+                self.add_output_field(
+                    (self.ds._dataset_type, "tr%d"%i), sampling_type="cell",
+                    units="",
+                )
+                self.alias(
+                    ("gas", "Tracer %d"%i), 
+                    (self.ds._dataset_type, "tr%d"%i), units="",
+                )
+                self.alias(
+                    ("gas", "tracer %d"%i),  
+                    (self.ds._dataset_type, "tr%d"%i), units="",
+                )
+        
+        if (self.ds._dataset_type, "Temp") in self.field_list:
+            self.add_output_field(
+                    (self.ds._dataset_type, "Temp"), sampling_type="cell",
+                    units=unit_system["temperature"],
+                )
+            self.alias(
+                ("gas", "Temperature"), 
+                (self.ds._dataset_type, "Temp"), units=unit_system["temperature"],
+            )
+            self.alias(
+                ("gas", "temperature"), 
+                (self.ds._dataset_type, "Temp"), units=unit_system["temperature"],
+            )
+        elif (self.ds._dataset_type, "temp") in self.field_list:
+            self.add_output_field(
+                    (self.ds._dataset_type, "temp"), sampling_type="cell",
+                    units=unit_system["temperature"],
+                )
+            self.alias(
+                ("gas", "Temperature"), 
+                (self.ds._dataset_type, "temp"), units=unit_system["temperature"],
+            )
+            self.alias(
+                ("gas", "temperature"), 
+                (self.ds._dataset_type, "temp"), units=unit_system["temperature"],
+            )
+        elif (self.ds._dataset_type, "Temperature") in self.field_list:
+            self.add_output_field(
+                    (self.ds._dataset_type, "Temperature"), sampling_type="cell",
+                    units=unit_system["temperature"],
+                )
+            self.alias(
+                ("gas", "Temperature"), 
+                (self.ds._dataset_type, "Temperature"), units=unit_system["temperature"],
+            )
+            self.alias(
+                ("gas", "temperature"), 
+                (self.ds._dataset_type, "Temperature"), units=unit_system["temperature"],
+            )
+        elif (self.ds._dataset_type, "temperature") in self.field_list:
+            self.add_output_field(
+                    (self.ds._dataset_type, "temperature"), sampling_type="cell",
+                    units=unit_system["temperature"],
+                )
+            self.alias(
+                ("gas", "Temperature"), 
+                (self.ds._dataset_type, "temperature"), units=unit_system["temperature"],
+            )
+            self.alias(
+                ("gas", "temperature"), 
+                (self.ds._dataset_type, "temperature"), units=unit_system["temperature"],
+            )
+        else:
+            def _temperature(field, data):
+                return data.ds.mu * (mh / kboltz) * (data[("gas", "pressure")] / data[("gas", "density")])
+                
+            self.add_field(
+                    ("gas", "Temperature"), sampling_type="cell",
+                    function = _temperature,
+                    units=unit_system["temperature"],
+                )
+            self.alias(
+                ("gas", "temperature"), 
+                ("gas", "Temperature"), units=unit_system["temperature"],
+            )
+            
+        if (self.ds._dataset_type, "mach") in self.field_list:
+            self.add_output_field(
+                    (self.ds._dataset_type, "mach"), sampling_type="cell",
+                    units="",
+                )
+            self.alias(
+                ("gas", "Mach"), 
+                (self.ds._dataset_type, "mach"), units="",
+            )
+            self.alias(
+                ("gas", "mach"), 
+                (self.ds._dataset_type, "mach"), units="",
+            )
+        else:
+            def _mach(field, data):
+                return np.sqrt(data[(self.ds._dataset_type, "vx1")]**2 + data[(self.ds._dataset_type, "vx2")]**2 + data[(self.ds._dataset_type, "vx3")]**2)\
+                    /np.sqrt(data.ds.gamma * (data[("gas", "pressure")] / data[("gas", "density")]))
+                    
+            self.add_field(
+                    ("gas", "Mach"), sampling_type="cell",
+                    function = _mach,
+                    units="",
+                )
+            self.alias(
+                ("gas", "mach"), 
+                ("gas", "Mach"), units="",
+            )
+        
+        if (self.ds._dataset_type, "ndens") in self.field_list:
+            self.add_output_field(
+                    (self.ds._dataset_type, "ndens"), sampling_type="cell",
+                    units=unit_system["length"]**-3,
+                )
+            self.alias(
+                ("gas", "ndens"), 
+                (self.ds._dataset_type, "ndens"), units=unit_system["length"]**-3,
+            )
+            self.alias(
+                ("gas", "Number Density"), 
+                (self.ds._dataset_type, "ndens"), units=unit_system["length"]**-3,
+            )
+            self.alias(
+                ("gas", "number density"), 
+                (self.ds._dataset_type, "ndens"), units=unit_system["length"]**-3,
+            )
+            self.alias(
+                ("gas", "Number density"), 
+                (self.ds._dataset_type, "ndens"), units=unit_system["length"]**-3,
+            )
+        else:
+           def _ndens(field, data):
+                return data["gas", "density"]/(data.ds.mu * mh)
+                    
+           self.add_field(
+                    ("gas", "Number Density"), sampling_type="cell",
+                    function = _ndens,
+                    units=unit_system["length"]**-3,
+           )
+           self.alias(
+                ("gas", "number density"), 
+                ("gas", "Number Density"), units=unit_system["length"]**-3,
+           )
+           self.alias(
+                ("gas", "Number density"), 
+                ("gas", "Number Density"), units=unit_system["length"]**-3,
+           ) 
+        
+        def _velMag(field, data):
+            print('PLUTO ', data)
+            return np.sqrt(data[(self.ds._dataset_type, "vx1")]**2 + data[(self.ds._dataset_type, "vx2")]**2 + data[(self.ds._dataset_type, "vx3")]**2)
+            
+        self.add_field(
+                ("gas", "Speed"), sampling_type="cell",
+                function = _velMag,
+                units=unit_system["velocity"],
+            )       
+        self.alias(
+            ("gas", "speed"), 
+            ("gas", "Speed"), units=unit_system["velocity"],
+        )
+        self.alias(
+            ("gas", "Velocity Magnitude"), 
+            ("gas", "Speed"), units=unit_system["velocity"],
+        )
+        
+    def setup_particle_fields(self, ptype):
+        super().setup_particle_fields(ptype)
+        # This will get called for every particle type.
