@@ -16,18 +16,24 @@ import numpy as np
 from yt.data_objects.index_subobjects.stretched_grid import StretchedGrid
 from yt.data_objects.static_output import Dataset
 from yt.funcs import setdefaultattr
-from yt.geometry.grid_geometry_handler import GridIndex
 from yt.geometry.api import Geometry
+from yt.geometry.grid_geometry_handler import GridIndex
 from yt.utilities.lib.misc_utilities import (  # type: ignore [import]
     _obtain_coords_and_widths,
 )
+from yt.utilities.on_demand_imports import _h5py as h5py
 from yt_idefix._typing import UnitLike
 
 from ._io import C_io, dmp_io, vtk_io
 from ._io.commons import IdefixFieldProperties, IdefixMetadata
 from .definitions import _PlutoBaseUnits, pluto_def_constants
-from .fields import BaseVtkFields, IdefixDmpFields, IdefixVtkFields, PlutoVtkFields, PlutoXdmfFields
-from yt.utilities.on_demand_imports import _h5py as h5py
+from .fields import (
+    BaseVtkFields,
+    IdefixDmpFields,
+    IdefixVtkFields,
+    PlutoVtkFields,
+    PlutoXdmfFields,
+)
 
 # import IO classes to ensure they are properly registered,
 # even though we don't call them directly
@@ -237,51 +243,70 @@ class IdefixDmpHierarchy(IdefixVtkHierarchy):
             fdata["x3"] * length_unit,
         )
 
+
 class PlutoXdmfHierarchy(IdefixHierarchy):
-    
     def _get_field_offset_index(self) -> None:
-        return None # Dummy
+        return None  # Dummy
 
     def _detect_output_fields(self):
         with h5py.File(self.index_filename, mode="r") as h5f:
-            self.field_list = [(self.ds._dataset_type, "%s"%k) for k in h5f[list(h5f.keys())[0]+'/vars/']]
+            self.field_list = [
+                (self.ds._dataset_type, "%s" % k)
+                for k in h5f[list(h5f.keys())[0] + "/vars/"]
+            ]
 
     def _parse_grid_data(self, gridtxt):
         start = 10
         nx1 = int(gridtxt[start][:-1])
-        start = start + (nx1+1)
+        start = start + (nx1 + 1)
         nx2 = int(gridtxt[start][:-1])
-        start = start + (nx2+1)
+        start = start + (nx2 + 1)
         nx3 = int(gridtxt[start][:-1])
 
         start = 11
-        cell_width1 = np.array([float(gridtxt[i].split()[-1])-float(gridtxt[i].split()[-2]) for i in range(start,start+nx1)])
-        start = start + (nx1+1)
-        cell_width2 = np.array([float(gridtxt[i].split()[-1])-float(gridtxt[i].split()[-2]) for i in range(start,start+nx2)])
-        start = start + (nx2+1)
-        cell_width3 = np.array([float(gridtxt[i].split()[-1])-float(gridtxt[i].split()[-2]) for i in range(start,start+nx3)])
-        cell_widths = (cell_width1,cell_width2,cell_width3)
+        cell_width1 = np.array(
+            [
+                float(gridtxt[i].split()[-1]) - float(gridtxt[i].split()[-2])
+                for i in range(start, start + nx1)
+            ]
+        )
+        start = start + (nx1 + 1)
+        cell_width2 = np.array(
+            [
+                float(gridtxt[i].split()[-1]) - float(gridtxt[i].split()[-2])
+                for i in range(start, start + nx2)
+            ]
+        )
+        start = start + (nx2 + 1)
+        cell_width3 = np.array(
+            [
+                float(gridtxt[i].split()[-1]) - float(gridtxt[i].split()[-2])
+                for i in range(start, start + nx3)
+            ]
+        )
+        cell_widths = (cell_width1, cell_width2, cell_width3)
         return cell_widths
-    
+
     @cached_property
     def _cell_widths(self) -> tuple[XSpans, YSpans, ZSpans]:
-        grid_file = os.path.join(os.path.dirname(self.index_filename), 'grid.out')
-        with open(grid_file, 'r') as gridtxt:
+        grid_file = os.path.join(os.path.dirname(self.index_filename), "grid.out")
+        with open(grid_file) as gridtxt:
             txt = gridtxt.readlines()
             cell_widths = self._parse_grid_data(txt)
-        return cell_widths    
+        return cell_widths
 
     @cached_property
     def _cell_centers(self) -> tuple[XCoords, YCoords, ZCoords]:
         cell_center1, cell_center2, cell_center3 = self._cell_widths
         start = cell_center1[0]
-        cell_center1 = start + 0.5*cell_center1
+        cell_center1 = start + 0.5 * cell_center1
         start = cell_center2[0]
-        cell_center2 = start + 0.5*cell_center2
+        cell_center2 = start + 0.5 * cell_center2
         start = cell_center3[0]
-        cell_center3 = start + 0.5*cell_center3
-        cell_widths = (cell_center1,cell_center2,cell_center3)
+        cell_center3 = start + 0.5 * cell_center3
+        cell_widths = (cell_center1, cell_center2, cell_center3)
         return cell_widths
+
 
 class IdefixDataset(Dataset, ABC):
     """A common abstraction for IdefixDmpDataset and IdefixVtkDataset."""
@@ -772,6 +797,7 @@ class PlutoVtkDataset(IdefixVtkDataset):
 
         super(cls, cls)._validate_units_override_keys(units_override)
 
+
 class PlutoXdmfDataset(PlutoVtkDataset):
     _index_class = PlutoXdmfHierarchy
     _field_info_class = PlutoXdmfFields
@@ -783,36 +809,80 @@ class PlutoXdmfDataset(PlutoVtkDataset):
     _field_offset_index = None
 
     def _parse_parameter_file(self):
-        data_file = self.parameter_filename
-        grid_file = os.path.join(os.path.dirname(self.parameter_filename), 'grid.out')
-        xmf_file  = self.parameter_filename[:-2]+'xmf'
-        out_file  = os.path.join(os.path.dirname(self.parameter_filename), self.parameter_filename[-6:]+'.out')
-        self._default_inifile = os.path.join(os.path.dirname(self.parameter_filename), self._default_inifile)
-        self._default_definitions_header = os.path.join(os.path.dirname(self.parameter_filename), self._default_definitions_header)
-        with open(grid_file, 'r') as gridtxt:
+        grid_file = os.path.join(os.path.dirname(self.parameter_filename), "grid.out")
+        self.parameter_filename[:-2] + "xmf"
+        out_file = os.path.join(
+            os.path.dirname(self.parameter_filename),
+            self.parameter_filename[-6:] + ".out",
+        )
+        self._default_inifile = os.path.join(
+            os.path.dirname(self.parameter_filename), self._default_inifile
+        )
+        self._default_definitions_header = os.path.join(
+            os.path.dirname(self.parameter_filename), self._default_definitions_header
+        )
+        with open(grid_file) as gridtxt:
             txt = gridtxt.readlines()
-            self.domain_left_edge  = np.array([ float(txt[i].replace(',', '').replace('[','').replace(']','').split()[2]) for i in [6,7,8] ])
-            self.domain_right_edge = np.array([ float(txt[i].replace(',', '').replace('[','').replace(']','').split()[3]) for i in [6,7,8] ])
-            self.dimensionality    = int(txt[4][-2])
-            self.domain_dimensions = np.array([ int(txt[i].replace(',', '').replace('[','').replace(']','').split()[4]) for i in [6,7,8] ] [:self.dimensionality])
+            self.domain_left_edge = np.array(
+                [
+                    float(
+                        txt[i]
+                        .replace(",", "")
+                        .replace("[", "")
+                        .replace("]", "")
+                        .split()[2]
+                    )
+                    for i in [6, 7, 8]
+                ]
+            )
+            self.domain_right_edge = np.array(
+                [
+                    float(
+                        txt[i]
+                        .replace(",", "")
+                        .replace("[", "")
+                        .replace("]", "")
+                        .split()[3]
+                    )
+                    for i in [6, 7, 8]
+                ]
+            )
+            self.dimensionality = int(txt[4][-2])
+            self.domain_dimensions = np.array(
+                [
+                    int(
+                        txt[i]
+                        .replace(",", "")
+                        .replace("[", "")
+                        .replace("]", "")
+                        .split()[4]
+                    )
+                    for i in [6, 7, 8]
+                ][: self.dimensionality]
+            )
 
             self.geometry = Geometry((txt[5].split()[-1]).lower())
 
-        with open(out_file, 'r') as outttxt:
+        with open(out_file) as outttxt:
             txt = outttxt.readlines()
-            entry = int(os.path.basename(self.parameter_filename).replace('.flt.h5','').replace('data.','').replace('.dbl.h5',''))
-            self.current_time =  float(txt[entry].split()[1])
+            entry = int(
+                os.path.basename(self.parameter_filename)
+                .replace(".flt.h5", "")
+                .replace("data.", "")
+                .replace(".dbl.h5", "")
+            )
+            self.current_time = float(txt[entry].split()[1])
             self.ntracers = 0
-            search = 'tr1'
-            while(search in txt[entry].split()):
+            search = "tr1"
+            while search in txt[entry].split():
                 self.ntracers += 1
-                search = 'tr%d'%(self.ntracers+1)
+                search = "tr%d" % (self.ntracers + 1)
 
         self.fluid_types += (self._dataset_type,)
         self.gamma = 5.0 / 3.0
         self.mu = 0.61
         self.storage_filename = self.parameter_filename
-        self.refine_by = 1 # no mesh refinement
+        self.refine_by = 1  # no mesh refinement
         self._periodicity = (True, True, True)
         # PlutoStatic cannot yet be run as a cosmological simulation
         self.cosmological_simulation = 0
@@ -830,58 +900,63 @@ class PlutoXdmfDataset(PlutoVtkDataset):
         from .definitions import pluto_def_constants
         from .misc import remove_comments
 
-        length_unit =  None
+        length_unit = None
         mass_unit = None
-        time_unit = None
         velocity_unit = None
-        density_unit  = None
+        density_unit = None
         magnetic_unit = None
 
-        if (os.path.exists(self._default_definitions_header)):
-            with open(self._default_definitions_header, 'r') as deftxt:
+        if os.path.exists(self._default_definitions_header):
+            with open(self._default_definitions_header) as deftxt:
                 lines = deftxt.readlines()
                 for line in lines:
                     line = remove_comments(line)
-                    if 'UNIT_LENGTH' in line:
+                    if "UNIT_LENGTH" in line:
                         length_unit = line.split()[-1]
-                    if 'UNIT_DENSITY' in line:
+                    if "UNIT_DENSITY" in line:
                         density_unit = line.split()[-1]
-                    if 'UNIT_VELOCITY' in line:
+                    if "UNIT_VELOCITY" in line:
                         velocity_unit = line.split()[-1]
-                        
+
             constant_names = list(pluto_def_constants.keys())
             if length_unit:
                 try:
                     length_unit = float(length_unit)
                 except ValueError:
                     for name in constant_names:
-                        length_unit = length_unit.replace(name, 'pluto_def_constants[\"%s\"]'%name)
-                    length_unit = length_unit.replace('sqrt','np.sqrt')
-                    length_unit = length_unit.replace('log','np.log')
+                        length_unit = length_unit.replace(
+                            name, 'pluto_def_constants["%s"]' % name
+                        )
+                    length_unit = length_unit.replace("sqrt", "np.sqrt")
+                    length_unit = length_unit.replace("log", "np.log")
                     length_unit = eval(length_unit)
-                
+
             if density_unit:
                 try:
                     density_unit = float(density_unit)
                 except ValueError:
                     for name in constant_names:
-                        density_unit = density_unit.replace(name, 'pluto_def_constants[\"%s\"]'%name)
-                    density_unit = density_unit.replace('sqrt','np.sqrt')
-                    density_unit = density_unit.replace('log','np.log')
+                        density_unit = density_unit.replace(
+                            name, 'pluto_def_constants["%s"]' % name
+                        )
+                    density_unit = density_unit.replace("sqrt", "np.sqrt")
+                    density_unit = density_unit.replace("log", "np.log")
                     density_unit = eval(density_unit)
-                
+
             if velocity_unit:
                 try:
                     velocity_unit = float(velocity_unit)
                 except ValueError:
                     for name in constant_names:
-                        velocity_unit = velocity_unit.replace(name, 'pluto_def_constants[\"%s\"]'%name)
-                    velocity_unit = velocity_unit.replace('sqrt','np.sqrt')
-                    velocity_unit = velocity_unit.replace('log','np.log')
+                        velocity_unit = velocity_unit.replace(
+                            name, 'pluto_def_constants["%s"]' % name
+                        )
+                    velocity_unit = velocity_unit.replace("sqrt", "np.sqrt")
+                    velocity_unit = velocity_unit.replace("log", "np.log")
                     velocity_unit = eval(velocity_unit)
-                
-            if (density_unit) and (length_unit) :
-                mass_unit = density_unit*length_unit**3
+
+            if (density_unit) and (length_unit):
+                mass_unit = density_unit * length_unit**3
 
         if not length_unit:
             self.length_unit = self.quan(1.0, "AU")
@@ -889,18 +964,28 @@ class PlutoXdmfDataset(PlutoVtkDataset):
             self.length_unit = self.quan(length_unit, "cm")
         if not mass_unit:
             if not density_unit:
-                mp = pluto_def_constants['CONST_mp']
-                self.mass_unit = self.quan(self.quan(mp, "g/cm**3")*self.length_unit**3/self.quan(1.0,"Msun"),"Msun")
+                mp = pluto_def_constants["CONST_mp"]
+                self.mass_unit = self.quan(
+                    self.quan(mp, "g/cm**3")
+                    * self.length_unit**3
+                    / self.quan(1.0, "Msun"),
+                    "Msun",
+                )
             else:
-               self.mass_unit = self.quan(self.quan(density_unit, "g/cm**3")*self.length_unit**3/self.quan(1.0,"Msun"),"Msun")
+                self.mass_unit = self.quan(
+                    self.quan(density_unit, "g/cm**3")
+                    * self.length_unit**3
+                    / self.quan(1.0, "Msun"),
+                    "Msun",
+                )
         else:
             self.mass_unit = self.quan(mass_unit, "g")
         if not velocity_unit:
             self.velocity_unit = self.quan(1.0, "km/s")
-            self.time_unit = self.length_unit/self.velocity_unit
+            self.time_unit = self.length_unit / self.velocity_unit
         else:
             self.velocity_unit = self.quan(velocity_unit, "cm/s")
-            self.time_unit = self.length_unit/self.velocity_unit
+            self.time_unit = self.length_unit / self.velocity_unit
         if not magnetic_unit:
             magnetic_unit = self.quan(1.0, "gauss")
         else:
@@ -915,15 +1000,22 @@ class PlutoXdmfDataset(PlutoVtkDataset):
         # False depending on if the file is of the type requested.
         test1 = ("dbl.h5" in filename) or ("flt.h5" in filename)
         directory = os.path.dirname(filename)
-        test2 = os.path.exists(filename[:-2]+'xmf')
-        test3 = os.path.exists(os.path.join(directory,'grid.out'))
-        test4 = os.path.exists(os.path.join(directory, filename[-6:]+'.out'))
+        test2 = os.path.exists(filename[:-2] + "xmf")
+        test3 = os.path.exists(os.path.join(directory, "grid.out"))
+        test4 = os.path.exists(os.path.join(directory, filename[-6:] + ".out"))
         try:
             fileh = h5py.File(filename, mode="r")
         except (ImportError, OSError):
             return False
         else:
             entries = list(fileh.keys())
-            return test1 and test2 and test3 and test4 and "cell_coords" in entries and "node_coords" in entries
+            return (
+                test1
+                and test2
+                and test3
+                and test4
+                and "cell_coords" in entries
+                and "node_coords" in entries
+            )
         finally:
             fileh.close()

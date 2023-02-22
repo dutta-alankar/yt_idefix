@@ -1,8 +1,10 @@
+
+import numpy as np
+
 from yt.fields.field_info_container import FieldInfoContainer
 from yt.fields.magnetic_field import setup_magnetic_field_aliases
 from yt.utilities.physical_constants import kboltz, mh
-import numpy as np
-import os
+
 
 class BaseVtkFields(FieldInfoContainer):
     known_other_fields = (
