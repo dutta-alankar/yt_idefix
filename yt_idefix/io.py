@@ -1,6 +1,7 @@
 from abc import ABC, abstractmethod
 from typing import BinaryIO, Tuple, cast
 
+import os
 import numpy as np
 
 from yt.utilities.io_handler import BaseIOHandler, BaseParticleIOHandler

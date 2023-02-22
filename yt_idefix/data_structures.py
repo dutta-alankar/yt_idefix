@@ -17,6 +17,7 @@ from yt.data_objects.index_subobjects.stretched_grid import StretchedGrid
 from yt.data_objects.static_output import Dataset
 from yt.funcs import setdefaultattr
 from yt.geometry.grid_geometry_handler import GridIndex
+from yt.geometry.api import Geometry
 from yt.utilities.lib.misc_utilities import (  # type: ignore [import]
     _obtain_coords_and_widths,
 )
@@ -25,7 +26,8 @@ from yt_idefix._typing import UnitLike
 from ._io import C_io, dmp_io, vtk_io
 from ._io.commons import IdefixFieldProperties, IdefixMetadata
 from .definitions import _PlutoBaseUnits, pluto_def_constants
-from .fields import BaseVtkFields, IdefixDmpFields, IdefixVtkFields, PlutoVtkFields
+from .fields import BaseVtkFields, IdefixDmpFields, IdefixVtkFields, PlutoVtkFields, PlutoXdmfFields
+from yt.utilities.on_demand_imports import _h5py as h5py
 
 # import IO classes to ensure they are properly registered,
 # even though we don't call them directly
@@ -210,7 +212,7 @@ class IdefixVtkHierarchy(IdefixHierarchy):
         return cell_centers
 
 
-class IdefixDmpHierarchy(IdefixHierarchy):
+class IdefixDmpHierarchy(IdefixVtkHierarchy):
     def _get_field_offset_index(self) -> dict[str, int]:
         with open(self.index_filename, "rb") as fh:
             return dmp_io.get_field_offset_index(fh)
@@ -236,10 +238,13 @@ class IdefixDmpHierarchy(IdefixHierarchy):
         )
 
 class PlutoXdmfHierarchy(IdefixHierarchy):
+    
+    def _get_field_offset_index(self) -> None:
+        return None # Dummy
 
     def _detect_output_fields(self):
         with h5py.File(self.index_filename, mode="r") as h5f:
-            self.field_list = [("pluto_xdmf", "%s"%k) for k in h5f[list(h5f.keys())[0]+'/vars/']]
+            self.field_list = [(self.ds._dataset_type, "%s"%k) for k in h5f[list(h5f.keys())[0]+'/vars/']]
 
     def _parse_grid_data(self, gridtxt):
         start = 10
@@ -255,22 +260,28 @@ class PlutoXdmfHierarchy(IdefixHierarchy):
         cell_width2 = np.array([float(gridtxt[i].split()[-1])-float(gridtxt[i].split()[-2]) for i in range(start,start+nx2)])
         start = start + (nx2+1)
         cell_width3 = np.array([float(gridtxt[i].split()[-1])-float(gridtxt[i].split()[-2]) for i in range(start,start+nx3)])
-        self._cell_widths = (cell_width1,cell_width2,cell_width3)
+        cell_widths = (cell_width1,cell_width2,cell_width3)
+        return cell_widths
+    
+    @cached_property
+    def _cell_widths(self) -> tuple[XSpans, YSpans, ZSpans]:
+        grid_file = os.path.join(os.path.dirname(self.index_filename), 'grid.out')
+        with open(grid_file, 'r') as gridtxt:
+            txt = gridtxt.readlines()
+            cell_widths = self._parse_grid_data(txt)
+        return cell_widths    
 
-    def _populate_grid_objects(self):
-        assert self.num_grids == 1
-        self.grids = np.empty(self.num_grids, dtype="object")
-        for i in range(self.num_grids):
-            grid_file = os.path.join(os.path.dirname(self.index_filename), 'grid.out')
-            with open(grid_file, 'r') as gridtxt:
-                txt = gridtxt.readlines()
-                self._parse_grid_data(txt)
-            g = self.grid(id=i, index=self, filename=self.index_filename, cell_widths=self._cell_widths,
-                           level=self.grid_levels.flat[i], dims=self.grid_dimensions[i], )
-
-            g._prepare_grid()
-            g._setup_dx()
-            self.grids[i] = g
+    @cached_property
+    def _cell_centers(self) -> tuple[XCoords, YCoords, ZCoords]:
+        cell_center1, cell_center2, cell_center3 = self._cell_widths
+        start = cell_center1[0]
+        cell_center1 = start + 0.5*cell_center1
+        start = cell_center2[0]
+        cell_center2 = start + 0.5*cell_center2
+        start = cell_center3[0]
+        cell_center3 = start + 0.5*cell_center3
+        cell_widths = (cell_center1,cell_center2,cell_center3)
+        return cell_widths
 
 class IdefixDataset(Dataset, ABC):
     """A common abstraction for IdefixDmpDataset and IdefixVtkDataset."""
@@ -762,12 +773,14 @@ class PlutoVtkDataset(IdefixVtkDataset):
         super(cls, cls)._validate_units_override_keys(units_override)
 
 class PlutoXdmfDataset(PlutoVtkDataset):
+    _index_class = PlutoXdmfHierarchy
     _field_info_class = PlutoXdmfFields
     _dataset_type = "pluto-xdmf"
     _version_regexp = re.compile(r"\d+\.\d+\.?\d*[-\w+]*")
     _required_header_keyword = "PLUTOXdmf"
     _default_definitions_header = "definitions.h"
     _default_inifile = "pluto.ini"
+    _field_offset_index = None
 
     def _parse_parameter_file(self):
         data_file = self.parameter_filename
@@ -824,7 +837,7 @@ class PlutoXdmfDataset(PlutoVtkDataset):
         density_unit  = None
         magnetic_unit = None
 
-        if (os.path.exists(self._default_definitions_header):
+        if (os.path.exists(self._default_definitions_header)):
             with open(self._default_definitions_header, 'r') as deftxt:
                 lines = deftxt.readlines()
                 for line in lines:
@@ -835,7 +848,7 @@ class PlutoXdmfDataset(PlutoVtkDataset):
                         density_unit = line.split()[-1]
                     if 'UNIT_VELOCITY' in line:
                         velocity_unit = line.split()[-1]
-
+                        
             constant_names = list(pluto_def_constants.keys())
             if length_unit:
                 try:
@@ -843,18 +856,20 @@ class PlutoXdmfDataset(PlutoVtkDataset):
                 except ValueError:
                     for name in constant_names:
                         length_unit = length_unit.replace(name, 'pluto_def_constants[\"%s\"]'%name)
-                    length_unit = velocity_unit.replace('sqrt','np.sqrt')
-                    length_unit = velocity_unit.replace('log','np.log')
+                    length_unit = length_unit.replace('sqrt','np.sqrt')
+                    length_unit = length_unit.replace('log','np.log')
                     length_unit = eval(length_unit)
+                
             if density_unit:
                 try:
                     density_unit = float(density_unit)
                 except ValueError:
                     for name in constant_names:
                         density_unit = density_unit.replace(name, 'pluto_def_constants[\"%s\"]'%name)
-                    density_unit = velocity_unit.replace('sqrt','np.sqrt')
-                    density_unit = velocity_unit.replace('log','np.log')
+                    density_unit = density_unit.replace('sqrt','np.sqrt')
+                    density_unit = density_unit.replace('log','np.log')
                     density_unit = eval(density_unit)
+                
             if velocity_unit:
                 try:
                     velocity_unit = float(velocity_unit)
@@ -864,6 +879,7 @@ class PlutoXdmfDataset(PlutoVtkDataset):
                     velocity_unit = velocity_unit.replace('sqrt','np.sqrt')
                     velocity_unit = velocity_unit.replace('log','np.log')
                     velocity_unit = eval(velocity_unit)
+                
             if (density_unit) and (length_unit) :
                 mass_unit = density_unit*length_unit**3
 

@@ -1,6 +1,8 @@
 from yt.fields.field_info_container import FieldInfoContainer
 from yt.fields.magnetic_field import setup_magnetic_field_aliases
-
+from yt.utilities.physical_constants import kboltz, mh
+import numpy as np
+import os
 
 class BaseVtkFields(FieldInfoContainer):
     known_other_fields = (
@@ -49,21 +51,21 @@ class IdefixDmpFields(FieldInfoContainer):
         )
 
 
-class PlutoXdmfFieldInfo(FieldInfoContainer):
+class PlutoXdmfFields(FieldInfoContainer):
     _pres_units = "code_pressure"
     _erg_units = "code_mass * (code_length/code_time)**2"
     _rho_units = "code_mass / code_length**3"
     _mom_units = "code_mass / code_length**2 / code_time"
     _vel_units = "code_length/code_time"
 
-    known_other_fields: KnownFieldsT = (
+    known_other_fields = (
         # Each entry here is of the form
         # ( "name", ("units", ["fields", "to", "alias"], # "display_name")),
-        ("rho", (self._rho_units, ["density", "rho"], None)),
-        ("vx1", (self._vel_units, ["vel_x"], None)),
-        ("vx2", (self._vel_units, ["vel_y"], None)),
-        ("vx3", (self._vel_units, ["vel_z"], None)),
-        ("prs", (self._pres_units, ["prs", "pres", "pressure"], None)),
+        ("rho", (_rho_units, ["density", "rho"], None)),
+        ("vx1", (_vel_units, ["vel_x"], None)),
+        ("vx2", (_vel_units, ["vel_y"], None)),
+        ("vx3", (_vel_units, ["vel_z"], None)),
+        ("prs", (_pres_units, ["prs", "pres", "pressure"], None)),
     )
 
     known_particle_fields = ()
