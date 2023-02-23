@@ -1033,5 +1033,3 @@ class PlutoXdmfDataset(PlutoVtkDataset):
                 and "cell_coords" in entries
                 and "node_coords" in entries
             )
-        finally:
-            return False
