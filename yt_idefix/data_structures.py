@@ -252,8 +252,7 @@ class PlutoXdmfHierarchy(IdefixHierarchy):
         with h5py.File(self.index_filename, mode="r") as h5f:
             root = list(h5f.keys())[0]
             self.field_list = [
-                (self.ds._dataset_type, str(k))
-                for k in list(h5f[f"{root}/vars/"])
+                (self.ds._dataset_type, str(k)) for k in list(h5f[f"{root}/vars/"])
             ]
 
     def _parse_grid_data(self, gridtxt):
@@ -822,31 +821,35 @@ class PlutoXdmfDataset(PlutoVtkDataset):
         with open(grid_file) as gridtxt:
             txt = gridtxt.readlines()
             for line in txt:
-                if ("# DIMENSIONS" in line):
+                if "# DIMENSIONS" in line:
                     self.dimensionality = int(line[-2])
                     break
-            domain_left_edge  = np.zeros(self.dimensionality, dtype=np.float64)
-            domain_right_edge  = np.zeros(self.dimensionality, dtype=np.float64)
+            domain_left_edge = np.zeros(self.dimensionality, dtype=np.float64)
+            domain_right_edge = np.zeros(self.dimensionality, dtype=np.float64)
             domain_dimensions = np.zeros(self.dimensionality, dtype=np.int64)
             geom_str = None
             count = 0
             for line in txt:
-                if (("# X1" in line) or ("# X2" in line) or ("# X3" in line)):
-                    tmp = line.replace(",", "").replace("[", "").replace("]", "").split()
-                    domain_left_edge[count]  = float(tmp[2])
+                if ("# X1" in line) or ("# X2" in line) or ("# X3" in line):
+                    tmp = (
+                        line.replace(",", "").replace("[", "").replace("]", "").split()
+                    )
+                    domain_left_edge[count] = float(tmp[2])
                     domain_right_edge[count] = float(tmp[3])
                     domain_dimensions[count] = int(tmp[4])
                     count += 1
-                if ("# GEOMETRY" in line):
+                if "# GEOMETRY" in line:
                     geom_str = (line.split()[-1]).lower()
-            for i in range(count, self.dimensionality): #These are dummy, may need some fix
-                domain_left_edge[i]  = 0.
-                domain_right_edge[i] = 1.
+            for i in range(
+                count, self.dimensionality
+            ):  # These are dummy, may need some fix
+                domain_left_edge[i] = 0.0
+                domain_right_edge[i] = 1.0
                 domain_dimensions[i] = 1
-            self.domain_left_edge  = domain_left_edge
+            self.domain_left_edge = domain_left_edge
             self.domain_right_edge = domain_right_edge
             self.domain_dimensions = domain_dimensions
-            
+
             def parse_geometry(geom: str):
                 import yt
 
@@ -862,9 +865,8 @@ class PlutoXdmfDataset(PlutoVtkDataset):
 
                 return geom
 
-
             self.geometry = parse_geometry(geom_str)
-            
+
         with open(out_file) as outttxt:
             txt = outttxt.readlines()
             entry = int(
