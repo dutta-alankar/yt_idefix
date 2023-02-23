@@ -16,7 +16,6 @@ import numpy as np
 from yt.data_objects.index_subobjects.stretched_grid import StretchedGrid
 from yt.data_objects.static_output import Dataset
 from yt.funcs import setdefaultattr
-from yt.geometry.api import Geometry
 from yt.geometry.grid_geometry_handler import GridIndex
 from yt.utilities.lib.misc_utilities import (  # type: ignore [import]
     _obtain_coords_and_widths,
@@ -860,9 +859,21 @@ class PlutoXdmfDataset(PlutoVtkDataset):
                     for i in [6, 7, 8]
                 ][: self.dimensionality]
             )
+            def parse_geometry(geom: str):
+                import yt
 
-            self.geometry = Geometry((txt[5].split()[-1]).lower())
+                if yt.version_info[:2] > (4, 1):
+                    try:
+                        from yt.geometry.api import Geometry  # type: ignore [attr-defined]
 
+                        return Geometry(geom)
+                    except ImportError:
+                        pass
+
+                return geom
+            geom_str = (txt[5].split()[-1]).lower()
+            self.geometry = parse_geometry(geom_str)
+            
         with open(out_file) as outttxt:
             txt = outttxt.readlines()
             entry = int(
