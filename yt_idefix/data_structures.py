@@ -833,11 +833,11 @@ class PlutoXdmfDataset(PlutoVtkDataset):
             for line in txt:
                 if (("# X1" in line) or ("# X2" in line) or ("# X3" in line)):
                     tmp = line.replace(",", "").replace("[", "").replace("]", "").split()
-                    domain_left_edge[count]  = float(tmp[2]) 
-                    domain_right_edge[count] = float(tmp[3]) 
-                    domain_dimensions[count] = int(tmp[4])   
-                    count += 1                   
-                if ("# GEOMETRY" in line): 
+                    domain_left_edge[count]  = float(tmp[2])
+                    domain_right_edge[count] = float(tmp[3])
+                    domain_dimensions[count] = int(tmp[4])
+                    count += 1
+                if ("# GEOMETRY" in line):
                     geom_str = (line.split()[-1]).lower()
             for i in range(count, self.dimensionality): #These are dummy, may need some fix
                 domain_left_edge[i]  = 0.
@@ -863,7 +863,7 @@ class PlutoXdmfDataset(PlutoVtkDataset):
 
                 return geom
 
-            
+
             self.geometry = parse_geometry(geom_str)
             '''
         with open(out_file) as outttxt:
