@@ -259,9 +259,9 @@ class PlutoXdmfHierarchy(IdefixHierarchy):
     def _parse_grid_data(self, gridtxt):
         start = 10
         nx1 = int(gridtxt[start][:-1])
-        start = start + (nx1 + 1)
+        start += (nx1 + 1)
         nx2 = int(gridtxt[start][:-1])
-        start = start + (nx2 + 1)
+        start += (nx2 + 1)
         nx3 = int(gridtxt[start][:-1])
 
         start = 11
@@ -271,14 +271,14 @@ class PlutoXdmfHierarchy(IdefixHierarchy):
                 for i in range(start, start + nx1)
             ]
         )
-        start = start + (nx1 + 1)
+        start += (nx1 + 1)
         cell_width2 = np.array(
             [
                 float(gridtxt[i].split()[-1]) - float(gridtxt[i].split()[-2])
                 for i in range(start, start + nx2)
             ]
         )
-        start = start + (nx2 + 1)
+        start += (nx2 + 1)
         cell_width3 = np.array(
             [
                 float(gridtxt[i].split()[-1]) - float(gridtxt[i].split()[-2])
