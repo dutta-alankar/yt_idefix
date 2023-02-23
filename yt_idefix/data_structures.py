@@ -253,7 +253,7 @@ class PlutoXdmfHierarchy(IdefixHierarchy):
             root = list(h5f.keys())[0]
             self.field_list = [
                 (self.ds._dataset_type, str(k))
-                for k in h5f[list(f"{root}/vars/"]
+                for k in h5f[list(f"{root}/vars/")]
             ]
 
     def _parse_grid_data(self, gridtxt):
@@ -808,7 +808,7 @@ class PlutoXdmfDataset(PlutoVtkDataset):
 
     def _parse_parameter_file(self):
         grid_file = os.path.join(os.path.dirname(self.parameter_filename), "grid.out")
-        self.parameter_filename[:-2] + "xmf"
+        xmf_file = self.parameter_filename[:-2] + "xmf"
         out_file = os.path.join(
             os.path.dirname(self.parameter_filename),
             self.parameter_filename[-6:] + ".out",
