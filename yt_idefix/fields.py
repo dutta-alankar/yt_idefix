@@ -1,4 +1,3 @@
-
 import numpy as np
 
 from yt.fields.field_info_container import FieldInfoContainer

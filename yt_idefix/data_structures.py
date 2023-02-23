@@ -859,21 +859,25 @@ class PlutoXdmfDataset(PlutoVtkDataset):
                     for i in [6, 7, 8]
                 ][: self.dimensionality]
             )
+
             def parse_geometry(geom: str):
                 import yt
 
                 if yt.version_info[:2] > (4, 1):
                     try:
-                        from yt.geometry.api import Geometry  # type: ignore [attr-defined]
+                        from yt.geometry.api import (
+                            Geometry,  # type: ignore [attr-defined]
+                        )
 
                         return Geometry(geom)
                     except ImportError:
                         pass
 
                 return geom
+
             geom_str = (txt[5].split()[-1]).lower()
             self.geometry = parse_geometry(geom_str)
-            
+
         with open(out_file) as outttxt:
             txt = outttxt.readlines()
             entry = int(
