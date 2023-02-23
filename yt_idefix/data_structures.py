@@ -1000,7 +1000,7 @@ class PlutoXdmfDataset(PlutoVtkDataset):
     def _is_valid(cls, filename, *args, **kwargs):
         # This accepts a filename or a set of arguments and returns True or
         # False depending on if the file is of the type requested.
-        test1 = ("dbl.h5" in filename) or ("flt.h5" in filename)
+        test1 = filename.endswith("dbl.h5") or filename.endswith("flt.h5")
         directory = os.path.dirname(filename)
         test2 = os.path.exists(filename[:-2] + "xmf")
         test3 = os.path.exists(os.path.join(directory, "grid.out"))
