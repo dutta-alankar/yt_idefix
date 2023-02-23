@@ -94,7 +94,7 @@ class PlutoXdmfIOHandler(BaseIOHandler):
     _dataset_type = "pluto-xdmf"
 
     def _read_particle_coords(self, chunks, ptf):
-        raise NotImplementedError("Reading of particle fields not yet impleted!")
+        raise NotImplementedError("Reading of particle fields not yet implemented!")
 
     def _read_particle_fields(self, chunks, ptf, selector):
         raise NotImplementedError("Reading of particle fields not yet impleted!")
