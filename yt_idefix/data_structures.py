@@ -846,8 +846,7 @@ class PlutoXdmfDataset(PlutoVtkDataset):
             self.domain_left_edge  = domain_left_edge
             self.domain_right_edge = domain_right_edge
             self.domain_dimensions = domain_dimensions
-            super()._setup_geometry(self)
-            '''
+            
             def parse_geometry(geom: str):
                 import yt
 
@@ -865,7 +864,7 @@ class PlutoXdmfDataset(PlutoVtkDataset):
 
 
             self.geometry = parse_geometry(geom_str)
-            '''
+            
         with open(out_file) as outttxt:
             txt = outttxt.readlines()
             entry = int(
