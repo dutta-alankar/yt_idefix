@@ -97,7 +97,7 @@ class PlutoXdmfIOHandler(BaseIOHandler):
         raise NotImplementedError("Reading of particle fields not yet implemented!")
 
     def _read_particle_fields(self, chunks, ptf, selector):
-        raise NotImplementedError("Reading of particle fields not yet impleted!")
+        raise NotImplementedError("Reading of particle fields not yet implemented!")
 
     def _read_fluid_selection(self, chunks, selector, fields, size):
         data = {}
