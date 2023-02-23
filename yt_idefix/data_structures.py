@@ -250,9 +250,10 @@ class PlutoXdmfHierarchy(IdefixHierarchy):
 
     def _detect_output_fields(self):
         with h5py.File(self.index_filename, mode="r") as h5f:
+            root = list(h5f.keys())[0]
             self.field_list = [
-                (self.ds._dataset_type, "%s" % k)
-                for k in h5f[list(h5f.keys())[0] + "/vars/"]
+                (self.ds._dataset_type, str(k))
+                for k in h5f[list(f"{root}/vars/"]
             ]
 
     def _parse_grid_data(self, gridtxt):
