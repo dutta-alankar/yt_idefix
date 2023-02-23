@@ -217,7 +217,7 @@ class IdefixVtkHierarchy(IdefixHierarchy):
         return cell_centers
 
 
-class IdefixDmpHierarchy(IdefixVtkHierarchy):
+class IdefixDmpHierarchy(IdefixHierarchy):
     def _get_field_offset_index(self) -> dict[str, int]:
         with open(self.index_filename, "rb") as fh:
             return dmp_io.get_field_offset_index(fh)
@@ -892,7 +892,7 @@ class PlutoXdmfDataset(PlutoVtkDataset):
             search = "tr1"
             while search in txt[entry].split():
                 self.ntracers += 1
-                search = "tr%d" % (self.ntracers + 1)
+                search = f"tr{self.ntracers + 1}"
 
         self.fluid_types += (self._dataset_type,)
         self.gamma = 5.0 / 3.0
