@@ -244,8 +244,10 @@ class IdefixDmpHierarchy(IdefixVtkHierarchy):
 
 
 class PlutoXdmfHierarchy(IdefixHierarchy):
-    def _get_field_offset_index(self) -> None:
-        return None  # Dummy
+    def _get_field_offset_index(self) -> dict[str, int]:
+        retv: dict[str, int] = {}
+        retv['dummy'] = 0
+        return retv  # Dummy
 
     def _detect_output_fields(self):
         with h5py.File(self.index_filename, mode="r") as h5f:
