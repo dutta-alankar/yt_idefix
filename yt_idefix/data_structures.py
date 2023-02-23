@@ -299,14 +299,11 @@ class PlutoXdmfHierarchy(IdefixHierarchy):
     @cached_property
     def _cell_centers(self) -> tuple[XCoords, YCoords, ZCoords]:
         cell_center1, cell_center2, cell_center3 = self._cell_widths
-        start = cell_center1[0]
-        cell_center1 = start + 0.5 * cell_center1
-        start = cell_center2[0]
-        cell_center2 = start + 0.5 * cell_center2
-        start = cell_center3[0]
-        cell_center3 = start + 0.5 * cell_center3
-        cell_widths = (cell_center1, cell_center2, cell_center3)
-        return cell_widths
+        return (
+            cell_center1[0] + 0.5 * cell_center1,
+            cell_center2[0] + 0.5 * cell_center2,
+            cell_center3[0] + 0.5 * cell_center3,
+        )
 
 
 class IdefixDataset(Dataset, ABC):
