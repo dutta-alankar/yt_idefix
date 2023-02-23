@@ -246,7 +246,7 @@ class IdefixDmpHierarchy(IdefixVtkHierarchy):
 class PlutoXdmfHierarchy(IdefixHierarchy):
     def _get_field_offset_index(self) -> dict[str, int]:
         retv: dict[str, int] = {}
-        retv['dummy'] = 0
+        retv["dummy"] = 0
         return retv  # Dummy
 
     def _detect_output_fields(self):
