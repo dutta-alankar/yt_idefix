@@ -252,12 +252,8 @@ class PlutoXdmfHierarchy(IdefixHierarchy):
         with h5py.File(self.index_filename, mode="r") as h5f:
             root = list(h5f.keys())[0]
             self.field_list = [
-<<<<<<< HEAD
                 (self.ds._dataset_type, str(k))
                 for k in list(h5f[f"{root}/vars/"])
-=======
-                (self.ds._dataset_type, str(k)) for k in h5f[list(f"{root}/vars/")]
->>>>>>> 0f6aa7d885bfdf552ad22bb93630f37113723d2a
             ]
 
     def _parse_grid_data(self, gridtxt):
@@ -850,6 +846,8 @@ class PlutoXdmfDataset(PlutoVtkDataset):
             self.domain_left_edge  = domain_left_edge
             self.domain_right_edge = domain_right_edge
             self.domain_dimensions = domain_dimensions
+            super()._setup_geometry(self)
+            '''
             def parse_geometry(geom: str):
                 import yt
 
@@ -867,7 +865,7 @@ class PlutoXdmfDataset(PlutoVtkDataset):
 
             
             self.geometry = parse_geometry(geom_str)
-
+            '''
         with open(out_file) as outttxt:
             txt = outttxt.readlines()
             entry = int(
