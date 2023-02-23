@@ -1024,6 +1024,7 @@ class PlutoXdmfDataset(PlutoVtkDataset):
             return False
         else:
             entries = list(fileh.keys())
+            fileh.close()
             return (
                 test1
                 and test2
@@ -1033,4 +1034,4 @@ class PlutoXdmfDataset(PlutoVtkDataset):
                 and "node_coords" in entries
             )
         finally:
-            fileh.close()
+            return False
