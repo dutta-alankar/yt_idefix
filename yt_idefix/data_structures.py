@@ -822,7 +822,6 @@ class PlutoXdmfDataset(PlutoVtkDataset):
     _index_class = PlutoXdmfHierarchy
     _field_info_class = PlutoXdmfFields
     _dataset_type = "pluto-xdmf"
-    _version_regexp = re.compile(r"\d+\.\d+\.?\d*[-\w+]*")
     _required_header_keyword = "PLUTOXdmf"
     _default_definitions_header = "definitions.h"
     _default_inifile = "pluto.ini"
