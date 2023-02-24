@@ -101,16 +101,16 @@ class PlutoXdmfIOHandler(BaseIOHandler):
 
     def _read_fluid_selection(self, chunks, selector, fields, size):
         data = {}
-        '''
-        Filenames are data.<snapnum>.<dbl/flt>.h5 
+        """
+        Filenames are data.<snapnum>.<dbl/flt>.h5
         <snapnum> needs to be parse from the filename.
         <snapnum> is the corresponding entry in the <dbl/flt>.h5.out file
         Example <dbl/flt>.h5.out file:
-            0 0.000000e+00 1.000000e-04 0 single_file little rho vx1 vx2 vx3 prs tr1 tr2 tr3 Temp ndens PbykB mach 
-            1 2.498181e+00 3.500985e-03 747 single_file little rho vx1 vx2 vx3 prs tr1 tr2 tr3 Temp ndens PbykB mach 
-            2 4.998045e+00 3.400969e-03 1458 single_file little rho vx1 vx2 vx3 prs tr1 tr2 tr3 Temp ndens PbykB mach 
+            0 0.000000e+00 1.000000e-04 0 single_file little rho vx1 vx2 vx3 prs tr1 tr2 tr3 Temp ndens PbykB mach
+            1 2.498181e+00 3.500985e-03 747 single_file little rho vx1 vx2 vx3 prs tr1 tr2 tr3 Temp ndens PbykB mach
+            2 4.998045e+00 3.400969e-03 1458 single_file little rho vx1 vx2 vx3 prs tr1 tr2 tr3 Temp ndens PbykB mach
             3 7.497932e+00 3.386245e-03 2186 single_file little rho vx1 vx2 vx3 prs tr1 tr2 tr3 Temp ndens PbykB mach
-        '''
+        """
         entry = int(
             os.path.basename(self.ds.parameter_filename)
             .replace(".flt.h5", "")
