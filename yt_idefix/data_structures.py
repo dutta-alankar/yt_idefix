@@ -357,7 +357,7 @@ class IdefixDataset(Dataset, ABC):
 
         dt = type(self)._dataset_type
         self.fluid_types += (dt,)
-        
+
         self._input_filename: str = os.fspath(filename)
         self._inifile = self._get_meta_file(inifile, default=self._default_inifile)
         self._definitions_header = self._get_meta_file(
@@ -830,9 +830,7 @@ class PlutoXdmfDataset(PlutoVtkDataset):
 
     def _parse_parameter_file(self):
         # IdefixDataset._parse_parameter_file()
-        grid_file = os.path.join(
-            self.directory, "grid.out"
-        )  # data-loc/grid.out
+        grid_file = os.path.join(self.directory, "grid.out")  # data-loc/grid.out
         (
             self.parameter_filename[:-2] + "xmf"
         )  # data.%04d.<dbl/flt>.h5 -> data.%04d.<dbl/flt>.xmf
@@ -841,9 +839,7 @@ class PlutoXdmfDataset(PlutoVtkDataset):
             self.parameter_filename[-6:]
             + ".out",  # data.%04d.<dbl/flt>.h5 -> <dbl/flt>.h5.out
         )
-        self._default_inifile = os.path.join(
-            self.directory, self._default_inifile
-        )
+        self._default_inifile = os.path.join(self.directory, self._default_inifile)
         self._default_definitions_header = os.path.join(
             self.directory, self._default_definitions_header
         )
