@@ -267,7 +267,7 @@ class PlutoXdmfHierarchy(IdefixHierarchy):
                 count += 1
             if count == 2:
                 break
-        start += 1  # This is the first line after the header lines in grid.out
+        _start += 1  # This is the first line after the header lines in grid.out
         """
         grid.out data has the following format
         NX1
@@ -280,13 +280,15 @@ class PlutoXdmfHierarchy(IdefixHierarchy):
         <count> <left-edge> <right-edge>
           ...    ...          ... (NX3 rows)
         """
-        nx1 = int(gridtxt[start][:-1])
+        start = _start
+        nx1 = int(gridtxt[_start][:-1])
         start += nx1 + 1
         nx2 = int(gridtxt[start][:-1])
         start += nx2 + 1
         nx3 = int(gridtxt[start][:-1])
-
-        start = 11
+        
+        # Seek back to the beginning of the grid data
+        start = _start+1
         cell_width1 = np.array(
             [
                 float(gridtxt[i].split()[-1]) - float(gridtxt[i].split()[-2])
@@ -409,8 +411,9 @@ class IdefixDataset(Dataset, ABC):
         self._parse_inifile()
         self._parse_definitions_header()
         self._setup_geometry()
-
-    def _parse_geometry(self, geom: str):
+    
+    @staticmethod
+    def _parse_geometry(geom: str):
         import yt
 
         if yt.version_info[:2] > (4, 1):
