@@ -823,7 +823,6 @@ class PlutoXdmfDataset(PlutoVtkDataset):
     _field_info_class = PlutoXdmfFields
     _dataset_type = "pluto-xdmf"
     _required_header_keyword = "PLUTOXdmf"
-    _default_definitions_header = "definitions.h"
     _default_inifile = "pluto.ini"
     _field_offset_index = None
 
