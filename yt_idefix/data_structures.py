@@ -386,6 +386,19 @@ class IdefixDataset(Dataset, ABC):
         self._parse_inifile()
         self._parse_definitions_header()
         self._setup_geometry()
+    
+    def _parse_geometry(self, geom: str):
+            import yt
+
+            if yt.version_info[:2] > (4, 1):
+                try:
+                    from yt.geometry.api import Geometry  # type: ignore [attr-defined]
+
+                    return Geometry(geom)
+                except ImportError:
+                    pass
+
+            return geom
 
     def _setup_geometry(self) -> None:
         from_bin = self.parameters.get("geometry", "")
@@ -420,21 +433,8 @@ class IdefixDataset(Dataset, ABC):
         else:
             assert from_disk
             geom_str = from_disk
-
-        def parse_geometry(geom: str):
-            import yt
-
-            if yt.version_info[:2] > (4, 1):
-                try:
-                    from yt.geometry.api import Geometry  # type: ignore [attr-defined]
-
-                    return Geometry(geom)
-                except ImportError:
-                    pass
-
-            return geom
-
-        self.geometry = parse_geometry(geom_str)
+            
+        self.geometry = self._parse_geometry(geom_str)
 
     def _parse_inifile(self) -> None:
         if not self._inifile:
@@ -856,22 +856,7 @@ class PlutoXdmfDataset(PlutoVtkDataset):
             self.domain_right_edge = domain_right_edge
             self.domain_dimensions = domain_dimensions
 
-            def parse_geometry(geom: str):
-                import yt
-
-                if yt.version_info[:2] > (4, 1):
-                    try:
-                        from yt.geometry.api import (
-                            Geometry,  # type: ignore [attr-defined]
-                        )
-
-                        return Geometry(geom)
-                    except ImportError:
-                        pass
-
-                return geom
-
-            self.geometry = parse_geometry(geom_str)
+            self.geometry = self._parse_geometry(geom_str)
 
         with open(out_file) as outttxt:
             txt = outttxt.readlines()
