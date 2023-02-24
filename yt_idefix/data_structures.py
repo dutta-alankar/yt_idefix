@@ -946,7 +946,7 @@ class PlutoXdmfDataset(PlutoVtkDataset):
                         txt = lines[i].split()
                         g_inputParam[txt[0]] = float(txt[1])
             inputParam_names = list(g_inputParam.keys())
-            
+
             if length_unit:
                 try:
                     length_unit = float(length_unit)
