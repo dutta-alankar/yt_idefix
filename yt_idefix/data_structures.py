@@ -315,7 +315,7 @@ class PlutoXdmfHierarchy(IdefixHierarchy):
 
     @cached_property
     def _cell_widths(self) -> tuple[XSpans, YSpans, ZSpans]:
-        grid_file = os.path.join(os.path.dirname(self.index_filename), "grid.out")
+        grid_file = os.path.join(self.directory, "grid.out")
         with open(grid_file) as gridtxt:
             txt = gridtxt.readlines()
             cell_widths = self._parse_grid_data(txt)
@@ -357,7 +357,7 @@ class IdefixDataset(Dataset, ABC):
 
         dt = type(self)._dataset_type
         self.fluid_types += (dt,)
-
+        
         self._input_filename: str = os.fspath(filename)
         self._inifile = self._get_meta_file(inifile, default=self._default_inifile)
         self._definitions_header = self._get_meta_file(
@@ -371,7 +371,6 @@ class IdefixDataset(Dataset, ABC):
             unit_system=unit_system,
             default_species_fields=default_species_fields,
         )
-
         self.storage_filename = None
 
         # idefix does not support grid refinement
@@ -832,21 +831,21 @@ class PlutoXdmfDataset(PlutoVtkDataset):
     def _parse_parameter_file(self):
         # IdefixDataset._parse_parameter_file()
         grid_file = os.path.join(
-            os.path.dirname(self.parameter_filename), "grid.out"
+            self.directory, "grid.out"
         )  # data-loc/grid.out
         (
             self.parameter_filename[:-2] + "xmf"
         )  # data.%04d.<dbl/flt>.h5 -> data.%04d.<dbl/flt>.xmf
         out_file = os.path.join(
-            os.path.dirname(self.parameter_filename),
+            self.directory,
             self.parameter_filename[-6:]
             + ".out",  # data.%04d.<dbl/flt>.h5 -> <dbl/flt>.h5.out
         )
         self._default_inifile = os.path.join(
-            os.path.dirname(self.parameter_filename), self._default_inifile
+            self.directory, self._default_inifile
         )
         self._default_definitions_header = os.path.join(
-            os.path.dirname(self.parameter_filename), self._default_definitions_header
+            self.directory, self._default_definitions_header
         )
         if os.path.exists(self._default_definitions_header):
             with open(self._default_definitions_header) as deftxt:
@@ -932,7 +931,6 @@ class PlutoXdmfDataset(PlutoVtkDataset):
         # This is a ballpark number for fully ionized plasma. For more accuracy, say to obtain temperature, let PLUTO dump this field as a user-defined field.
         self.mu = 0.61
         self.storage_filename = self.parameter_filename
-        self.refine_by = 1  # no mesh refinement
         self._periodicity = (True, True, True)
         # PLUTO cannot yet be run as a cosmological simulation
         self.cosmological_simulation = 0
