@@ -286,9 +286,9 @@ class PlutoXdmfHierarchy(IdefixHierarchy):
         nx2 = int(gridtxt[start][:-1])
         start += nx2 + 1
         nx3 = int(gridtxt[start][:-1])
-        
+
         # Seek back to the beginning of the grid data
-        start = _start+1
+        start = _start + 1
         cell_width1 = np.array(
             [
                 float(gridtxt[i].split()[-1]) - float(gridtxt[i].split()[-2])
@@ -411,7 +411,7 @@ class IdefixDataset(Dataset, ABC):
         self._parse_inifile()
         self._parse_definitions_header()
         self._setup_geometry()
-    
+
     @staticmethod
     def _parse_geometry(geom: str):
         import yt
