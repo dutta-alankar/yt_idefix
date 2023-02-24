@@ -1006,6 +1006,7 @@ class PlutoXdmfDataset(PlutoVtkDataset):
                         length_unit = length_unit.replace(name, f'"{name}"')
                     length_unit = length_unit.replace("sqrt", "np.sqrt")
                     length_unit = length_unit.replace("log", "np.log")
+                    length_unit = length_unit.replace("pow", "np.power")
                     length_unit = eval(length_unit)
 
             if density_unit:
@@ -1020,6 +1021,7 @@ class PlutoXdmfDataset(PlutoVtkDataset):
                         density_unit = density_unit.replace(name, f'"{name}"')
                     density_unit = density_unit.replace("sqrt", "np.sqrt")
                     density_unit = density_unit.replace("log", "np.log")
+                    density_unit = density_unit.replace("pow", "np.power")
                     density_unit = eval(density_unit)
 
             if velocity_unit:
@@ -1034,6 +1036,7 @@ class PlutoXdmfDataset(PlutoVtkDataset):
                         velocity_unit = velocity_unit.replace(name, f'"{name}"')
                     velocity_unit = velocity_unit.replace("sqrt", "np.sqrt")
                     velocity_unit = velocity_unit.replace("log", "np.log")
+                    velocity_unit = velocity_unit.replace("pow", "np.power")
                     velocity_unit = eval(velocity_unit)
 
             if (density_unit) and (length_unit):
