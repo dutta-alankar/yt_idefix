@@ -826,7 +826,7 @@ class PlutoXdmfDataset(PlutoVtkDataset):
     _field_info_class = PlutoXdmfFields
     _dataset_type = "pluto-xdmf"
     _required_header_keyword = "PLUTOXdmf"
-    _field_offset_index = {} # TODO(clm): clean this up
+    _field_offset_index = {}  # TODO(clm): clean this up
 
     def _parse_parameter_file(self):
         # IdefixDataset._parse_parameter_file()
