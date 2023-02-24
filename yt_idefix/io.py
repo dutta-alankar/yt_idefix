@@ -129,8 +129,12 @@ class PlutoXdmfIOHandler(BaseIOHandler):
                     for field in fields:
                         ftype, fname = field
                         position = f"/Timestep_{entry}/vars/{fname}"
+                        field_data = fh[position][:].astype("=f8")
+                        dimensionality = len(field_data.shape)
+                        if dimensionality==2: ordering = (1,0)
+                        elif dimensionality==3: ordering = (2,1,0)
                         # X3 X2 X1 orderding of fields in PLUTO needs to rearranged to X1 X2 X3 order in yt.
-                        values = np.transpose(fh[position][:].astype("=f8"), (2, 1, 0))
+                        values = field_data if dimensionality==1 else np.transpose(field_data, ordering)
                         nd = grid.select(selector, values, data[field], ind)
                     ind += nd
         return data
