@@ -386,19 +386,19 @@ class IdefixDataset(Dataset, ABC):
         self._parse_inifile()
         self._parse_definitions_header()
         self._setup_geometry()
-    
+
     def _parse_geometry(self, geom: str):
-            import yt
+        import yt
 
-            if yt.version_info[:2] > (4, 1):
-                try:
-                    from yt.geometry.api import Geometry  # type: ignore [attr-defined]
+        if yt.version_info[:2] > (4, 1):
+            try:
+                from yt.geometry.api import Geometry  # type: ignore [attr-defined]
 
-                    return Geometry(geom)
-                except ImportError:
-                    pass
+                return Geometry(geom)
+            except ImportError:
+                pass
 
-            return geom
+        return geom
 
     def _setup_geometry(self) -> None:
         from_bin = self.parameters.get("geometry", "")
@@ -433,7 +433,7 @@ class IdefixDataset(Dataset, ABC):
         else:
             assert from_disk
             geom_str = from_disk
-            
+
         self.geometry = self._parse_geometry(geom_str)
 
     def _parse_inifile(self) -> None:
