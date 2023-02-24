@@ -256,7 +256,29 @@ class PlutoXdmfHierarchy(IdefixHierarchy):
             ]
 
     def _parse_grid_data(self, gridtxt):
-        start = 10
+        '''
+        In grid.out 
+        # ***********
+        makrs the beginning and the end of header information
+        '''
+        count = 0
+        for start,line in enumerate(gridtxt):
+            if ('# ***********' in line):
+                count += 1
+            if (count==2): break
+        start += 1 # This is the first line after the header lines in grid.out
+        '''
+        grid.out data has the following format
+        NX1
+        <count> <left-edge> <right-edge>
+          ...    ...          ... (NX1 rows)
+        NX2
+        <count> <left-edge> <right-edge>
+          ...    ...          ... (NX2 rows) 
+        NX3
+        <count> <left-edge> <right-edge>
+          ...    ...          ... (NX3 rows)
+        '''
         nx1 = int(gridtxt[start][:-1])
         start += nx1 + 1
         nx2 = int(gridtxt[start][:-1])
@@ -830,17 +852,30 @@ class PlutoXdmfDataset(PlutoVtkDataset):
                 for line in lines:
                     if "USER_DEF_PARAMETERS" in line:
                         self.inputParamCount = int(line.split()[-1])
+                        
+        '''
+        grid.out file has entries like the following:
+
+            # DIMENSIONS: 2
+            # GEOMETRY:   POLAR
+            # X1: [ 0.040000,  0.500000], 400 point(s), 2 ghosts
+            # X2: [ 0.000000,  6.283185], 400 point(s), 2 ghosts
+            
+        These lines need to be parsed to create the appropriate grid data structure in yt.
+        Splitting and extracting the numers become straightforward when '[', ']' and ',' characters are removed before the split.
+        '''
         with open(grid_file) as gridtxt:
             txt = gridtxt.readlines()
             for line in txt:
                 if "# DIMENSIONS" in line:
-                    self.dimensionality = int(line[-2])
+                    self.dimensionality = int(line.split()[-1])
                     break
             domain_left_edge = np.zeros(self.dimensionality, dtype=np.float64)
             domain_right_edge = np.zeros(self.dimensionality, dtype=np.float64)
             domain_dimensions = np.zeros(self.dimensionality, dtype=np.int64)
             geom_str = None
             count = 0
+               
             for line in txt:
                 if ("# X1" in line) or ("# X2" in line) or ("# X3" in line):
                     tmp = (
