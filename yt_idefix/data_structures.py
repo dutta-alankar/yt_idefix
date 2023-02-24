@@ -280,6 +280,7 @@ class PlutoXdmfHierarchy(IdefixHierarchy):
         <count> <left-edge> <right-edge>
           ...    ...          ... (NX3 rows)
         """
+        # Beginning of the grid data
         start = _start
         nx1 = int(gridtxt[_start][:-1])
         start += nx1 + 1
