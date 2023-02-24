@@ -950,9 +950,9 @@ class PlutoXdmfDataset(PlutoVtkDataset):
                             break
                     tmp = 0
                     while tmp == 0:
-                        pos += 1
-                        tmp = len(lines[pos].split())
-                    for i in range(pos, pos + self.inputParamCount):
+                        _pos += 1
+                        tmp = len(lines[_pos].split())
+                    for i in range(_pos, _pos + self.inputParamCount):
                         txt = lines[i].split()
                         g_inputParam[txt[0]] = float(txt[1])
             inputParam_names = list(g_inputParam.keys())
