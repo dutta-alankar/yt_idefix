@@ -818,6 +818,12 @@ class PlutoXdmfDataset(PlutoVtkDataset):
         self._default_definitions_header = os.path.join(
             os.path.dirname(self.parameter_filename), self._default_definitions_header
         )
+        if os.path.exists(self._default_definitions_header):
+            with open(self._default_definitions_header) as deftxt:
+                lines = deftxt.readlines()
+                for line in lines:
+                    if "USER_DEF_PARAMETERS" in line:
+                        self.inputParamCount = int(line.split()[-1])
         with open(grid_file) as gridtxt:
             txt = gridtxt.readlines()
             for line in txt:
@@ -923,13 +929,35 @@ class PlutoXdmfDataset(PlutoVtkDataset):
                         velocity_unit = line.split()[-1]
 
             constant_names = list(pluto_def_constants.keys())
+            g_inputParam = {}
+            if ('g_inputParam' in length_unit) or ('g_inputParam' in density_unit) or ('g_inputParam' in velocity_unit):
+                ini_file = os.path.join(os.path.dirname(self.parameter_filename), "pluto.ini")
+                if (not(os.path.exists(ini_file)):
+                    raise RuntimeError("pluto.ini file is needed for unit conversion but is missing!")
+                with open(ini_file, 'r') as ini:
+                    lines = ini.readlines()
+                    for pos,line in enumerate(lines):
+                        if ('[Parameters]' in line): break
+                    tmp = 0
+                    while (tmp==0):
+                        pos += 1
+                        tmp = len(lines[pos].split())
+                    for i in range(pos, pos+self.inputParamCount):
+                        txt = lines[i].split()
+                        g_inputParam[txt[0]] = float(txt[1])
+            inputParam_names = list(g_inputParam.keys())
+            
             if length_unit:
                 try:
                     length_unit = float(length_unit)
                 except ValueError:
                     for name in constant_names:
                         length_unit = length_unit.replace(
-                            name, 'pluto_def_constants["%s"]' % name
+                            name, f'pluto_def_constants["{name}"]'
+                        )
+                    for name in inputParam_names:
+                        length_unit = length_unit.replace(
+                            name, f'"{name}"'
                         )
                     length_unit = length_unit.replace("sqrt", "np.sqrt")
                     length_unit = length_unit.replace("log", "np.log")
@@ -941,7 +969,11 @@ class PlutoXdmfDataset(PlutoVtkDataset):
                 except ValueError:
                     for name in constant_names:
                         density_unit = density_unit.replace(
-                            name, 'pluto_def_constants["%s"]' % name
+                            name, f'pluto_def_constants["{name}"]'
+                        )
+                    for name in inputParam_names:
+                        density_unit = density_unit.replace(
+                            name, f'"{name}"'
                         )
                     density_unit = density_unit.replace("sqrt", "np.sqrt")
                     density_unit = density_unit.replace("log", "np.log")
@@ -953,7 +985,11 @@ class PlutoXdmfDataset(PlutoVtkDataset):
                 except ValueError:
                     for name in constant_names:
                         velocity_unit = velocity_unit.replace(
-                            name, 'pluto_def_constants["%s"]' % name
+                            name, f'pluto_def_constants["{name}"]'
+                        )
+                    for name in inputParam_names:
+                        velocity_unit = velocity_unit.replace(
+                            name, f'"{name}"'
                         )
                     velocity_unit = velocity_unit.replace("sqrt", "np.sqrt")
                     velocity_unit = velocity_unit.replace("log", "np.log")
