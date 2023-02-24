@@ -932,7 +932,7 @@ class PlutoXdmfDataset(PlutoVtkDataset):
             g_inputParam = {}
             if ('g_inputParam' in length_unit) or ('g_inputParam' in density_unit) or ('g_inputParam' in velocity_unit):
                 ini_file = os.path.join(os.path.dirname(self.parameter_filename), "pluto.ini")
-                if (not(os.path.exists(ini_file)):
+                if (not(os.path.exists(ini_file))):
                     raise RuntimeError("pluto.ini file is needed for unit conversion but is missing!")
                 with open(ini_file, 'r') as ini:
                     lines = ini.readlines()
