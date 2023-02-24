@@ -929,6 +929,7 @@ class PlutoXdmfDataset(PlutoVtkDataset):
                         velocity_unit = line.split()[-1]
 
             constant_names = list(pluto_def_constants.keys())
+            # if definitions.h uses inputParamaeter then these values need to be read from pluto.ini
             g_inputParam = {}
             if (
                 ("g_inputParam" in length_unit)
