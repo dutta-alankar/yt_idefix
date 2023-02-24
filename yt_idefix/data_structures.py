@@ -806,14 +806,14 @@ class PlutoXdmfDataset(PlutoVtkDataset):
     _field_offset_index = None
 
     def _parse_parameter_file(self):
-        grid_file = os.path.join(os.path.dirname(self.parameter_filename), "grid.out")
-        self.parameter_filename[:-2] + "xmf"
+        grid_file = os.path.join(os.path.dirname(self.parameter_filename), "grid.out") # data-loc/grid.out
+        xmf_file = self.parameter_filename[:-2] + "xmf" # data.%04d.<dbl/flt>.h5 -> data.%04d.<dbl/flt>.xmf
         out_file = os.path.join(
             os.path.dirname(self.parameter_filename),
-            self.parameter_filename[-6:] + ".out",
+            self.parameter_filename[-6:] + ".out", # data.%04d.<dbl/flt>.h5 -> <dbl/flt>.h5.out
         )
         self._default_inifile = os.path.join(
-            os.path.dirname(self.parameter_filename), self._default_inifile
+            os.path.dirname(self.parameter_filename), self._default_inifile 
         )
         self._default_definitions_header = os.path.join(
             os.path.dirname(self.parameter_filename), self._default_definitions_header
@@ -936,14 +936,11 @@ class PlutoXdmfDataset(PlutoVtkDataset):
                 or ("g_inputParam" in density_unit)
                 or ("g_inputParam" in velocity_unit)
             ):
-                ini_file = os.path.join(
-                    os.path.dirname(self.parameter_filename), "pluto.ini"
-                )
-                if not (os.path.exists(ini_file)):
+                if not (os.path.exists(self._default_inifile)):
                     raise RuntimeError(
                         "pluto.ini file is needed for unit conversion but is missing!"
                     )
-                with open(ini_file) as ini:
+                with open(self._default_inifile) as ini:
                     lines = ini.readlines()
                     for _pos, line in enumerate(lines):
                         if "[Parameters]" in line:
@@ -1043,10 +1040,9 @@ class PlutoXdmfDataset(PlutoVtkDataset):
         # This accepts a filename or a set of arguments and returns True or
         # False depending on if the file is of the type requested.
         test1 = filename.endswith("dbl.h5") or filename.endswith("flt.h5")
-        directory = os.path.dirname(filename)
-        test2 = os.path.exists(filename[:-2] + "xmf")
-        test3 = os.path.exists(os.path.join(directory, "grid.out"))
-        test4 = os.path.exists(os.path.join(directory, filename[-6:] + ".out"))
+        test2 = os.path.exists(filename[:-2] + "xmf") # data.%04d.<dbl/flt>.h5 -> data.%04d.<dbl/flt>.xmf
+        test3 = os.path.exists(os.path.join(os.path.dirname(filename), "grid.out")) # data-loc/grid.out
+        test4 = os.path.exists(os.path.join(os.path.dirname(filename), filename[-6:] + ".out")) # data.%04d.<dbl/flt>.h5 -> <dbl/flt>.h5.out
         try:
             fileh = h5py.File(filename, mode="r")
         except (ImportError, OSError):
