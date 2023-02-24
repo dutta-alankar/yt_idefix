@@ -966,16 +966,16 @@ class PlutoXdmfDataset(PlutoVtkDataset):
             # if definitions.h uses inputParamaeter then these values need to be read from pluto.ini
             g_inputParam = {}
             read_ini = False
-            if type(length_unit)==str:
-                if ("g_inputParam" in length_unit):
+            if type(length_unit) == str:
+                if "g_inputParam" in length_unit:
                     read_ini = True
-            if type(density_unit)==str:
-                if ("g_inputParam" in density_unit):
+            if type(density_unit) == str:
+                if "g_inputParam" in density_unit:
                     read_ini = True
-            if type(velocity_unit)==str:
-                if ("g_inputParam" in velocity_unit):
-                    read_ini = True        
-            if (read_ini):
+            if type(velocity_unit) == str:
+                if "g_inputParam" in velocity_unit:
+                    read_ini = True
+            if read_ini:
                 if not (os.path.exists(self._default_inifile)):
                     raise RuntimeError(
                         "pluto.ini file is needed for unit conversion but is missing!"
