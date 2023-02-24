@@ -828,7 +828,7 @@ class PlutoXdmfDataset(PlutoVtkDataset):
     _field_offset_index = None
 
     def _parse_parameter_file(self):
-        # IdefixDataset._parse_parameter_file() 
+        # IdefixDataset._parse_parameter_file()
         grid_file = os.path.join(
             os.path.dirname(self.parameter_filename), "grid.out"
         )  # data-loc/grid.out
@@ -901,16 +901,16 @@ class PlutoXdmfDataset(PlutoVtkDataset):
 
         with open(out_file) as outttxt:
             txt = outttxt.readlines()
-            '''
-            Filenames are data.<snapnum>.<dbl/flt>.h5 
+            """
+            Filenames are data.<snapnum>.<dbl/flt>.h5
             <snapnum> needs to be parse from the filename.
             <snapnum> is the corresponding entry in the <dbl/flt>.h5.out file
             Example <dbl/flt>.h5.out file:
-                0 0.000000e+00 1.000000e-04 0 single_file little rho vx1 vx2 vx3 prs tr1 tr2 tr3 Temp ndens PbykB mach 
-                1 2.498181e+00 3.500985e-03 747 single_file little rho vx1 vx2 vx3 prs tr1 tr2 tr3 Temp ndens PbykB mach 
-                2 4.998045e+00 3.400969e-03 1458 single_file little rho vx1 vx2 vx3 prs tr1 tr2 tr3 Temp ndens PbykB mach 
+                0 0.000000e+00 1.000000e-04 0 single_file little rho vx1 vx2 vx3 prs tr1 tr2 tr3 Temp ndens PbykB mach
+                1 2.498181e+00 3.500985e-03 747 single_file little rho vx1 vx2 vx3 prs tr1 tr2 tr3 Temp ndens PbykB mach
+                2 4.998045e+00 3.400969e-03 1458 single_file little rho vx1 vx2 vx3 prs tr1 tr2 tr3 Temp ndens PbykB mach
                 3 7.497932e+00 3.386245e-03 2186 single_file little rho vx1 vx2 vx3 prs tr1 tr2 tr3 Temp ndens PbykB mach
-            '''
+            """
             entry = int(
                 os.path.basename(self.parameter_filename)
                 .replace(".flt.h5", "")
@@ -919,16 +919,16 @@ class PlutoXdmfDataset(PlutoVtkDataset):
             )
             self.current_time = float(txt[entry].split()[1])
             self.ntracers = 0
-            search = "tr1" # Passive tracer names in PLUTO are tr1, tr2, tr3 and so on by default
+            search = "tr1"  # Passive tracer names in PLUTO are tr1, tr2, tr3 and so on by default
             while search in txt[entry].split():
                 self.ntracers += 1
                 search = f"tr{self.ntracers + 1}"
 
         self.fluid_types += (self._dataset_type,)
         # check g_gamma value in the simulation and change this if needed. Unfortunately, automating this is not trivial.
-        self.gamma = 5.0 / 3.0 
+        self.gamma = 5.0 / 3.0
         # This is a ballpark number for fully ionized plasma. For more accuracy, say to obtain temperature, let PLUTO dump this field as a user-defined field.
-        self.mu = 0.61 
+        self.mu = 0.61
         self.storage_filename = self.parameter_filename
         self.refine_by = 1  # no mesh refinement
         self._periodicity = (True, True, True)
