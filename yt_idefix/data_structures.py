@@ -584,7 +584,7 @@ class PlutoStaticDataset(IdefixDataset):
             return
 
         log_regexp = re.compile(rf"^{index}\s(\S+)")
-        with open(out_file, "r") as fh:
+        with open(out_file) as fh:
             for line in fh.readlines():
                 log_match = re.search(log_regexp, line)
                 if log_match:
@@ -616,7 +616,7 @@ class PlutoStaticDataset(IdefixDataset):
             warnings.warn(f"Could not determine code version from file {grid_file}")
             return "unknown"
 
-        with open(self.grid_file, "r") as fh:
+        with open(self.grid_file) as fh:
             txt = fh.readlines()
             for line in txt:
                 if "# DIMENSIONS" in line:
@@ -661,7 +661,7 @@ class PlutoStaticDataset(IdefixDataset):
             )
             return
 
-        with open(self._definitions_header, "r") as fh:
+        with open(self._definitions_header) as fh:
             body = fh.read()
         lines = C_io.strip_comments(body).split("\n")
 
@@ -1148,7 +1148,7 @@ class PlutoXdmfDataset(PlutoStaticDataset):
 
         self._parse_snapshot_time(out_file)
 
-        with open(out_file, "r") as fh:
+        with open(out_file) as fh:
             txt = fh.readlines()
             entry = int(
                 os.path.basename(self.parameter_filename)
