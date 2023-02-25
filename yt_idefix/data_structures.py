@@ -616,7 +616,7 @@ class PlutoStaticDataset(IdefixDataset):
             warnings.warn(
                 f"Could not determine code version from file {self.grid_file}"
             )
-            return 
+            return
 
         with open(self.grid_file) as fh:
             txt = fh.readlines()
