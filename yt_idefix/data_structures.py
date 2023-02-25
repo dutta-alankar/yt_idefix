@@ -983,7 +983,7 @@ class PlutoXdmfDataset(PlutoStaticDataset):
         self._periodicity = (True, True, True)
 
     def _get_code_version(self) -> str:
-        # take the last line of the header
+        # take the first line of the header
         # Code version is read from grid.out
         """
         In grid.out
