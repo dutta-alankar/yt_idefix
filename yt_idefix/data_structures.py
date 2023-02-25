@@ -674,22 +674,18 @@ class IdefixDmpDataset(IdefixDataset):
         super()._parse_parameter_file()
 
 
-class PlutoVtkDataset(PlutoStaticDataset, IdefixVtkDataset):
+class PlutoVtkDataset(IdefixVtkDataset):
+    # TODO(clm): refactor class hierarchy so this inherits from PlutoStaticDataset
     _field_info_class = PlutoVtkFields
     _dataset_type = "pluto-vtk"
     _version_regexp = re.compile(r"\d+\.\d+\.?\d*[-\w+]*")
     _required_header_keyword = "PLUTO"
+    _default_definitions_header = "definitions.h"
+    _default_inifile = "pluto.ini"
 
     def _parse_parameter_file(self):
         super()._parse_parameter_file()
-        # base method, intended to be subclassed
-        # parse the version hash
-        self.parameters["code version"] = self._get_code_version()
-
-        self._parse_inifile()
-        self._parse_definitions_header()
-        self._setup_geometry()
-
+        
         # parse time from vtk.out
         log_file = os.path.join(self.directory, "vtk.out")
         if (match := re.search(r"\.(\d*)\.", self.parameter_filename)) is None:
