@@ -613,7 +613,9 @@ class PlutoStaticDataset(IdefixDataset):
                 self.directory, "grid.out"
             )  # data-loc/grid.out
         if not (os.path.exists(self.grid_file)):
-            warnings.warn(f"Could not determine code version from file {grid_file}")
+            warnings.warn(
+                f"Could not determine code version from file {self.grid_file}"
+            )
             return "unknown"
 
         with open(self.grid_file) as fh:
@@ -709,7 +711,9 @@ class PlutoStaticDataset(IdefixDataset):
                 self.directory, "grid.out"
             )  # data-loc/grid.out
         if not (os.path.exists(self.grid_file)):
-            warnings.warn(f"Could not determine code version from file {grid_file}")
+            warnings.warn(
+                f"Could not determine code version from file {self.grid_file}"
+            )
             return "unknown"
 
         count = 0
