@@ -530,6 +530,7 @@ class PlutoStaticDataset(IdefixDataset):
 
     _version_regexp = re.compile(r"v\d+\.\d+\.?\d*[-\w+]*")
     _dataset_type: str  # defined in subclasses
+    _required_header_keyword = "PLUTO"
     _default_definitions_header = "definitions.h"
     _default_inifile = "pluto.ini"
 
@@ -555,24 +556,250 @@ class PlutoStaticDataset(IdefixDataset):
             unit_system=unit_system,
             default_species_fields=default_species_fields,
         )
-
         # PLUTO (non Chombo) does not support grid refinement
         self.refine_by = 1
-
+        
+    def _read_data_header(self) -> str:
+        return ""
+        
     def _parse_parameter_file(self):
-        # PLUTO is never cosmological
-        self.cosmological_simulation = 0
-        self.current_redshift = 0.0
-        self.omega_lambda = 0.0
-        self.omega_matter = 0.0
-        self.hubble_constant = 0.0
-        """
-        self._parse_inifile()
+        super()._parse_parameter_file()
         self._parse_definitions_header()
-        self._setup_geometry()
+        self._parse_gridfile() # The geometry set in definitions.h is overriden
+        
+    def _parse_snapshot_time(self, out_file: str | os.PathLike[str]):
+        # parse time from <dbl.h5/flt.h5/vtk>.out file
+        
+        if (match := re.search(r"\.(\d*)\.", self.parameter_filename)) is None:
+            raise RuntimeError(
+                f"Failed to parse output number from file name {self.parameter_filename}"
+            )
+        index = int(match.group(1))
+
+        # will be converted to actual unyt_quantity in _set_derived_attrs
+        self.current_time = -1
+
+        if not os.path.isfile(out_file):
+            ytLogger.warning("Missing log file %s, setting current_time = -1", out_file)
+            return
+
+        log_regexp = re.compile(rf"^{index}\s(\S+)")
+        with open(out_file, 'r') as fh:
+            for line in fh.readlines():
+                log_match = re.search(log_regexp, line)
+                if log_match:
+                    self.current_time = float(log_match.group(1))
+                    break
+            else:
+                ytLogger.warning(
+                    "Failed to retrieve time from %s, setting current_time = -1",
+                    out_file,
+                )
+                
+    def _parse_gridfile(self) -> None:
         """
+        grid.out file has entries like the following:
 
+            # DIMENSIONS: 2
+            # GEOMETRY:   POLAR
+            # X1: [ 0.040000,  0.500000], 400 point(s), 2 ghosts
+            # X2: [ 0.000000,  6.283185], 400 point(s), 2 ghosts
 
+        These lines need to be parsed to create the appropriate grid data structure in yt.
+        Splitting and extracting the numers become straightforward when '[', ']' and ',' characters are removed before the split.
+        """
+        self.grid_file = os.path.join(self.directory, "grid.out")  # data-loc/grid.out
+        
+        with open(self.grid_file, 'r') as fh:
+            txt = fh.readlines()
+            for line in txt:
+                if "# DIMENSIONS" in line:
+                    self.dimensionality = int(line.split()[-1])
+                    break
+            domain_left_edge = np.zeros(self.dimensionality, dtype=np.float64)
+            domain_right_edge = np.zeros(self.dimensionality, dtype=np.float64)
+            domain_dimensions = np.zeros(self.dimensionality, dtype=np.int64)
+            
+            geom_str = None
+            count = 0
+            for line in txt:
+                if ("# X1" in line) or ("# X2" in line) or ("# X3" in line):
+                    tmp = (
+                        line.replace(",", "").replace("[", "").replace("]", "").split()
+                    )
+                    domain_left_edge[count] = float(tmp[2])
+                    domain_right_edge[count] = float(tmp[3])
+                    domain_dimensions[count] = int(tmp[4])
+                    count += 1
+                if "# GEOMETRY" in line:
+                    geom_str = (line.split()[-1]).lower()
+            for i in range(
+                count, self.dimensionality
+            ):  # These are dummy, may need some fix
+                domain_left_edge[i] = 0.0
+                domain_right_edge[i] = 1.0
+                domain_dimensions[i] = 1
+            self.domain_left_edge = domain_left_edge
+            self.domain_right_edge = domain_right_edge
+            self.domain_dimensions = domain_dimensions
+            
+            self.geometry = self._parse_geometry(geom_str)
+        
+    def _parse_definitions_header(self) -> None:
+        """Read some metadata from header file 'definitions.h'."""
+        self.parameters["definitions"] = {}
+        if not self._definitions_header:
+            ytLogger.warning(
+                "%s was not found. Code units will be set to 1.0 in cgs.",
+                self._default_definitions_header,
+            )
+            return
+
+        with open(self._definitions_header, 'r') as fh:
+            body = fh.read()
+        lines = C_io.strip_comments(body).split("\n")
+
+        for line in lines:
+            if (geom_match := re.fullmatch(_DEF_GEOMETRY_REGEXP, line)) is not None:
+                self.parameters["definitions"]["geometry"] = geom_match.group(1).lower()
+            elif (unit_match := re.fullmatch(_DEF_UNIT_REGEXP, line)) is not None:
+                unit = unit_match.group(1).lower() + "_unit"
+                expr = unit_match.group(2)
+                # Before evaluating the expression, replace the input parameters,
+                # pre-defined constants, code units and arithmetic operators
+                # that cannot be resolved. The order doesn't matter.
+                expr = re.sub(r"g_inputParam\[(\w+)\]", self._get_input_parameter, expr)
+                expr = re.sub(r"CONST_\w+", self._get_constants, expr)
+                expr = re.sub(r"UNIT_(\w+)", self._get_unit, expr)
+                expr = re.sub(r"sqrt", "np.sqrt", expr)
+                expr = re.sub(r"log", "np.log", expr)
+                self.parameters["definitions"][unit] = eval(expr)
+
+    def _get_input_parameter(self, match: re.Match) -> str:
+        """Replace matched input parameters with its value"""
+        key = match.group(1)
+        return str(self.parameters["Parameters"][key])
+
+    def _get_unit(self, match: re.Match) -> str:
+        """Replace matched unit with its value"""
+        key = match.group(1).lower() + "_unit"
+        return str(self.parameters["definitions"].get(key, 1.0))
+
+    def _get_constants(self, match: re.Match) -> str:
+        """Replace matched constant string with its value"""
+        key = match.group()
+        return str(pluto_def_constants[key])
+    
+    def _get_code_version(self) -> str:
+        # take the first line of the header
+        # Code version is read from grid.out
+        """
+        In grid.out
+        # ***********
+        makrs the beginning and the end of header information
+        """
+        grid_file = os.path.join(self.directory, "grid.out")  # data-loc/grid.out
+
+        if not (os.path.exists(grid_file)):
+            warnings.warn(f"Could not determine code version from file {grid_file}")
+            return "unknown"
+
+        count = 0
+        version = ""
+        with open(grid_file) as gridtxt:
+            txt = gridtxt.readlines()
+
+            for _start, line in enumerate(txt):
+                if "# ***********" in line:
+                    count += 1
+                if count == 1:
+                    break
+            _start += 1  # This is the first line of the header info lines in grid.out (version info is here)
+            version = txt[_start].split()[2]
+        return version
+        
+    def _set_code_unit_attributes(self):
+        """Conversion between physical units and code units."""
+
+        # Pluto's base units are length, velocity and density, but here we consider
+        # length, mass and time as base units. Since it can make us easy to calculate
+        # all units when self.units_override is not None.
+
+        # Default values of Pluto's base units which are stored in self.parameters
+        # if they can be read from definitions.h
+        # Otherwise, they are set to the default values adopted in Pluto.
+        # velocity_unit = km/s
+        # density_unit = mp/cm**3
+        # length_unit = au
+        defs = self.parameters["definitions"]
+        pluto_units = {
+            "velocity_unit": self.quan(defs.get("velocity_unit", 1.0e5), "cm/s"),
+            "density_unit": self.quan(
+                defs.get("density_unit", pluto_def_constants["CONST_mp"]), "g/cm**3"
+            ),
+            "length_unit": self.quan(
+                defs.get("length_unit", pluto_def_constants["CONST_au"]), "cm"
+            ),
+        }
+
+        uo_size = len(self.units_override)
+        if uo_size > 0 and uo_size < 3:
+            ytLogger.info(
+                "Less than 3 units were specified in units_override (got %s). "
+                "Need to rely on PLUTO's internal units to derive other units",
+                uo_size,
+            )
+
+        uo_cache = self.units_override.copy()
+        while len(uo_cache) < 3:
+            # If less than 3 units were passed into units_override,
+            # the rest will be chosen from Pluto's units
+            unit, value = pluto_units.popitem()
+            # If any Pluto's base unit is specified in units_override, it'll be preserved
+            if unit in uo_cache:
+                continue
+            uo_cache[unit] = value
+            # Make sure the combination of units are able to derive base units
+            # No need of validation and logging when no unit to be overrided
+            if uo_size > 0:
+                try:
+                    self._validate_units_override_keys(uo_cache)
+                except ValueError:
+                    # It means the combination is invalid
+                    del uo_cache[unit]
+                else:
+                    ytLogger.info("Relying on %s: %s.", unit, uo_cache[unit])
+
+        bu = _PlutoBaseUnits(uo_cache)
+        for unit, value in bu._data.items():
+            setattr(self, unit, value)
+
+        self.velocity_unit = self.length_unit / self.time_unit
+        self.density_unit = self.mass_unit / self.length_unit**3
+        self.magnetic_unit = (
+            np.sqrt(4.0 * np.pi * self.density_unit) * self.velocity_unit
+        )
+        self.magnetic_unit.convert_to_units("gauss")
+        self.temperature_unit = self.quan(1.0, "K")
+
+    invalid_unit_combinations = [
+        {"magnetic_unit", "velocity_unit", "density_unit"},
+        {"velocity_unit", "time_unit", "length_unit"},
+        {"density_unit", "length_unit", "mass_unit"},
+    ]
+
+    default_units = {
+        "length_unit": "cm",
+        "time_unit": "s",
+        "mass_unit": "g",
+        "velocity_unit": "cm/s",
+        "magnetic_unit": "gauss",
+        "temperature_unit": "K",
+        # this is the one difference with Dataset.default_units:
+        # we accept density_unit as a valid override
+        "density_unit": "g/cm**3",
+    }
+    
 class IdefixVtkDataset(IdefixDataset):
     _index_class = IdefixVtkHierarchy
     _field_info_class: type[BaseVtkFields] = IdefixVtkFields
@@ -742,7 +969,6 @@ class PlutoVtkDataset(IdefixVtkDataset):
                 expr = re.sub(r"UNIT_(\w+)", self._get_unit, expr)
                 expr = re.sub(r"sqrt", "np.sqrt", expr)
                 expr = re.sub(r"log", "np.log", expr)
-                expr = re.sub(r"log10", "np.log10", expr)
                 self.parameters["definitions"][unit] = eval(expr)
 
     def _get_input_parameter(self, match: re.Match) -> str:
@@ -878,89 +1104,14 @@ class PlutoVtkDataset(IdefixVtkDataset):
 
         super(cls, cls)._validate_units_override_keys(units_override)
 
-
 class PlutoXdmfDataset(PlutoStaticDataset):
     _index_class = PlutoXdmfHierarchy
     _field_info_class = PlutoXdmfFields
     _dataset_type = "pluto-xdmf"
     _required_header_keyword = "PLUTOXdmf"
-
-    def _read_data_header(self) -> str:
-        return ""
-
+    
     def _parse_parameter_file(self):
-        super()._parse_parameter_file()
-        self.parameters["code version"] = self._get_code_version()
-
-        grid_file = os.path.join(self.directory, "grid.out")  # data-loc/grid.out
-        (
-            self.parameter_filename[:-2] + "xmf"
-        )  # data.%04d.<dbl/flt>.h5 -> data.%04d.<dbl/flt>.xmf
-        out_file = os.path.join(
-            self.directory,
-            self.parameter_filename[-6:]
-            + ".out",  # data.%04d.<dbl/flt>.h5 -> <dbl/flt>.h5.out
-        )
-        self._default_inifile = os.path.join(self.directory, self._default_inifile)
-        self._default_definitions_header = os.path.join(
-            self.directory, self._default_definitions_header
-        )
-        if os.path.exists(self._default_definitions_header):
-            with open(self._default_definitions_header) as deftxt:
-                lines = deftxt.readlines()
-                for line in lines:
-                    if "USER_DEF_PARAMETERS" in line:
-                        self.inputParamCount = int(line.split()[-1])
-
         """
-        grid.out file has entries like the following:
-
-            # DIMENSIONS: 2
-            # GEOMETRY:   POLAR
-            # X1: [ 0.040000,  0.500000], 400 point(s), 2 ghosts
-            # X2: [ 0.000000,  6.283185], 400 point(s), 2 ghosts
-
-        These lines need to be parsed to create the appropriate grid data structure in yt.
-        Splitting and extracting the numers become straightforward when '[', ']' and ',' characters are removed before the split.
-        """
-        with open(grid_file) as gridtxt:
-            txt = gridtxt.readlines()
-            for line in txt:
-                if "# DIMENSIONS" in line:
-                    self.dimensionality = int(line.split()[-1])
-                    break
-            domain_left_edge = np.zeros(self.dimensionality, dtype=np.float64)
-            domain_right_edge = np.zeros(self.dimensionality, dtype=np.float64)
-            domain_dimensions = np.zeros(self.dimensionality, dtype=np.int64)
-            geom_str = None
-            count = 0
-
-            for line in txt:
-                if ("# X1" in line) or ("# X2" in line) or ("# X3" in line):
-                    tmp = (
-                        line.replace(",", "").replace("[", "").replace("]", "").split()
-                    )
-                    domain_left_edge[count] = float(tmp[2])
-                    domain_right_edge[count] = float(tmp[3])
-                    domain_dimensions[count] = int(tmp[4])
-                    count += 1
-                if "# GEOMETRY" in line:
-                    geom_str = (line.split()[-1]).lower()
-            for i in range(
-                count, self.dimensionality
-            ):  # These are dummy, may need some fix
-                domain_left_edge[i] = 0.0
-                domain_right_edge[i] = 1.0
-                domain_dimensions[i] = 1
-            self.domain_left_edge = domain_left_edge
-            self.domain_right_edge = domain_right_edge
-            self.domain_dimensions = domain_dimensions
-
-            self.geometry = self._parse_geometry(geom_str)
-
-        with open(out_file) as outttxt:
-            txt = outttxt.readlines()
-            """
             Filenames are data.<snapnum>.<dbl/flt>.h5
             <snapnum> needs to be parse from the filename.
             <snapnum> is the corresponding entry in the <dbl/flt>.h5.out file
@@ -969,199 +1120,45 @@ class PlutoXdmfDataset(PlutoStaticDataset):
                 1 2.498181e+00 3.500985e-03 747 single_file little rho vx1 vx2 vx3 prs tr1 tr2 tr3 Temp ndens PbykB mach
                 2 4.998045e+00 3.400969e-03 1458 single_file little rho vx1 vx2 vx3 prs tr1 tr2 tr3 Temp ndens PbykB mach
                 3 7.497932e+00 3.386245e-03 2186 single_file little rho vx1 vx2 vx3 prs tr1 tr2 tr3 Temp ndens PbykB mach
-            """
+                
+            One of these lines is parsed to count the number of passive tracer fields in the data dump.
+        """
+        super()._parse_parameter_file()
+        self.xmf_file  = os.path.join(
+            self.directory,
+            self.parameter_filename[:-2] + "xmf" ) # data.%04d.<dbl/flt>.h5 -> data.%04d.<dbl/flt>.xmf
+        self.parameters["code version"] = self._get_code_version()
+        
+        out_file = os.path.join(
+            self.directory,
+            self.parameter_filename[-6:]
+            + ".out",  # data.%04d.<dbl/flt>.h5 -> <dbl/flt>.h5.out
+        )
+        
+        self._parse_snapshot_time(out_file)
+        
+        with open(out_file, 'r') as fh:
+            txt = fh.readlines()
             entry = int(
                 os.path.basename(self.parameter_filename)
                 .replace(".flt.h5", "")
                 .replace("data.", "")
                 .replace(".dbl.h5", "")
             )
-            self.current_time = float(txt[entry].split()[1])
+            
             self.ntracers = 0
             search = "tr1"  # Passive tracer names in PLUTO are tr1, tr2, tr3 and so on by default
             while search in txt[entry].split():
                 self.ntracers += 1
                 search = f"tr{self.ntracers + 1}"
-
-        self.fluid_types += (self._dataset_type,)
+            
         # check g_gamma value in the simulation and change this if needed. Unfortunately, automating this is not trivial.
         self.gamma = 5.0 / 3.0
         # This is a ballpark number for fully ionized plasma. For more accuracy, say to obtain temperature, let PLUTO dump this field as a user-defined field.
         self.mu = 0.61
         self.storage_filename = self.parameter_filename
         self._periodicity = (True, True, True)
-
-    def _get_code_version(self) -> str:
-        # take the first line of the header
-        # Code version is read from grid.out
-        """
-        In grid.out
-        # ***********
-        makrs the beginning and the end of header information
-        """
-        grid_file = os.path.join(self.directory, "grid.out")  # data-loc/grid.out
-
-        if not (os.path.exists(grid_file)):
-            warnings.warn(f"Could not determine code version from file {grid_file}")
-            return "unknown"
-
-        count = 0
-        version = ""
-        with open(grid_file) as gridtxt:
-            txt = gridtxt.readlines()
-
-            for _start, line in enumerate(txt):
-                if "# ***********" in line:
-                    count += 1
-                if count == 1:
-                    break
-            _start += 1  # This is the first line of the header info lines in grid.out (version info is here)
-            version = txt[_start].split()[2]
-        return version
-
-    def _set_code_unit_attributes(self):
-        # This is where quantities are created that represent the various
-        # on-disk units.  These are the defaults, but if they are listed
-        # in the HDF5 attributes for a file, which is loaded first, then those are
-        # used instead.
-        #
-        from .definitions import pluto_def_constants
-        from .misc import remove_comments
-
-        length_unit = None
-        mass_unit = None
-        velocity_unit = None
-        density_unit = None
-        magnetic_unit = None
-
-        if os.path.exists(self._default_definitions_header):
-            with open(self._default_definitions_header) as deftxt:
-                lines = deftxt.readlines()
-                for line in lines:
-                    line = remove_comments(line)
-                    if "UNIT_LENGTH" in line:
-                        length_unit = line.split()[-1]
-                    if "UNIT_DENSITY" in line:
-                        density_unit = line.split()[-1]
-                    if "UNIT_VELOCITY" in line:
-                        velocity_unit = line.split()[-1]
-
-            constant_names = list(pluto_def_constants.keys())
-            # if definitions.h uses inputParamaeter then these values need to be read from pluto.ini
-            g_inputParam = {}
-            read_ini = False
-            if type(length_unit) == str:
-                if "g_inputParam" in length_unit:
-                    read_ini = True
-            if type(density_unit) == str:
-                if "g_inputParam" in density_unit:
-                    read_ini = True
-            if type(velocity_unit) == str:
-                if "g_inputParam" in velocity_unit:
-                    read_ini = True
-            if read_ini:
-                if not (os.path.exists(self._default_inifile)):
-                    raise RuntimeError(
-                        "pluto.ini file is needed for unit conversion but is missing!"
-                    )
-                with open(self._default_inifile) as ini:
-                    lines = ini.readlines()
-                    for _pos, line in enumerate(lines):
-                        if "[Parameters]" in line:
-                            break
-                    tmp = 0
-                    while tmp == 0:
-                        _pos += 1
-                        tmp = len(lines[_pos].split())
-                    for i in range(_pos, _pos + self.inputParamCount):
-                        txt = lines[i].split()
-                        g_inputParam[txt[0]] = float(txt[1])
-            inputParam_names = list(g_inputParam.keys())
-
-            if length_unit:
-                try:
-                    length_unit = float(length_unit)
-                except ValueError:
-                    for name in constant_names:
-                        length_unit = length_unit.replace(
-                            name, f'pluto_def_constants["{name}"]'
-                        )
-                    for name in inputParam_names:
-                        length_unit = length_unit.replace(name, f'"{name}"')
-                    length_unit = length_unit.replace("sqrt", "np.sqrt")
-                    length_unit = length_unit.replace("log", "np.log")
-                    length_unit = length_unit.replace("pow", "np.power")
-                    length_unit = eval(length_unit)
-
-            if density_unit:
-                try:
-                    density_unit = float(density_unit)
-                except ValueError:
-                    for name in constant_names:
-                        density_unit = density_unit.replace(
-                            name, f'pluto_def_constants["{name}"]'
-                        )
-                    for name in inputParam_names:
-                        density_unit = density_unit.replace(name, f'"{name}"')
-                    density_unit = density_unit.replace("sqrt", "np.sqrt")
-                    density_unit = density_unit.replace("log", "np.log")
-                    density_unit = density_unit.replace("pow", "np.power")
-                    density_unit = eval(density_unit)
-
-            if velocity_unit:
-                try:
-                    velocity_unit = float(velocity_unit)
-                except ValueError:
-                    for name in constant_names:
-                        velocity_unit = velocity_unit.replace(
-                            name, f'pluto_def_constants["{name}"]'
-                        )
-                    for name in inputParam_names:
-                        velocity_unit = velocity_unit.replace(name, f'"{name}"')
-                    velocity_unit = velocity_unit.replace("sqrt", "np.sqrt")
-                    velocity_unit = velocity_unit.replace("log", "np.log")
-                    velocity_unit = velocity_unit.replace("pow", "np.power")
-                    velocity_unit = eval(velocity_unit)
-
-            if (density_unit) and (length_unit):
-                mass_unit = density_unit * length_unit**3
-
-        if not length_unit:
-            self.length_unit = self.quan(1.0, "AU")
-        else:
-            self.length_unit = self.quan(length_unit, "cm")
-        if not mass_unit:
-            if not density_unit:
-                mp = pluto_def_constants["CONST_mp"]
-                self.mass_unit = self.quan(
-                    self.quan(mp, "g/cm**3")
-                    * self.length_unit**3
-                    / self.quan(1.0, "Msun"),
-                    "Msun",
-                )
-            else:
-                self.mass_unit = self.quan(
-                    self.quan(density_unit, "g/cm**3")
-                    * self.length_unit**3
-                    / self.quan(1.0, "Msun"),
-                    "Msun",
-                )
-        else:
-            self.mass_unit = self.quan(mass_unit, "g")
-        if not velocity_unit:
-            self.velocity_unit = self.quan(1.0, "km/s")
-            self.time_unit = self.length_unit / self.velocity_unit
-        else:
-            self.velocity_unit = self.quan(velocity_unit, "cm/s")
-            self.time_unit = self.length_unit / self.velocity_unit
-        if not magnetic_unit:
-            magnetic_unit = self.quan(1.0, "gauss")
-        else:
-            self.magnetic_unit = self.quan(magnetic_unit, "gauss")
-
-        for key, unit in self.__class__.default_units.items():
-            setdefaultattr(self, key, self.quan(1, unit))
-
+        
     @classmethod
     def _is_valid(cls, filename, *args, **kwargs):
         # This accepts a filename or a set of arguments and returns True or
