@@ -993,9 +993,7 @@ class PlutoXdmfDataset(PlutoStaticDataset):
         grid_file = os.path.join(self.directory, "grid.out")  # data-loc/grid.out
 
         if not (os.path.exists(grid_file)):
-            warnings.warn(
-                f"Could not determine code version from file {grid_file}"
-            )
+            warnings.warn(f"Could not determine code version from file {grid_file}")
             return "unknown"
 
         count = 0
