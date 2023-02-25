@@ -715,7 +715,7 @@ class PlutoStaticDataset(IdefixDataset):
         count = 0
         version = ""
 
-        with open(self.grid_file, "r") as fh:
+        with open(self.grid_file) as fh:
             txt = fh.readlines()
 
             for _start, line in enumerate(txt):
