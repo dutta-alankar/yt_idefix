@@ -685,7 +685,7 @@ class PlutoVtkDataset(IdefixVtkDataset):
 
     def _parse_parameter_file(self):
         super()._parse_parameter_file()
-        
+
         # parse time from vtk.out
         log_file = os.path.join(self.directory, "vtk.out")
         if (match := re.search(r"\.(\d*)\.", self.parameter_filename)) is None:
