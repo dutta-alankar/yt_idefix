@@ -316,7 +316,7 @@ class PlutoXdmfHierarchy(IdefixHierarchy):
     @cached_property
     def _cell_widths(self) -> tuple[XSpans, YSpans, ZSpans]:
         grid_file = os.path.join(self.directory, "grid.out")
-        with open(grid_file, 'r') as gridtxt:
+        with open(grid_file) as gridtxt:
             txt = gridtxt.readlines()
             cell_widths = self._parse_grid_data(txt)
         return cell_widths
@@ -524,6 +524,7 @@ class IdefixDataset(Dataset, ABC):
 
         return match.group()
 
+
 class PlutoStaticDataset(IdefixDataset):
     """A common abstraction for PlutoXdmfDataset and PlutoVtkDataset."""
 
@@ -554,7 +555,7 @@ class PlutoStaticDataset(IdefixDataset):
             unit_system=unit_system,
             default_species_fields=default_species_fields,
         )
-        
+
         # PLUTO (non Chombo) does not support grid refinement
         self.refine_by = 1
 
@@ -565,11 +566,12 @@ class PlutoStaticDataset(IdefixDataset):
         self.omega_lambda = 0.0
         self.omega_matter = 0.0
         self.hubble_constant = 0.0
-        '''
+        """
         self._parse_inifile()
         self._parse_definitions_header()
         self._setup_geometry()
-        '''
+        """
+
 
 class IdefixVtkDataset(IdefixDataset):
     _index_class = IdefixVtkHierarchy
@@ -683,7 +685,7 @@ class PlutoVtkDataset(PlutoStaticDataset, IdefixVtkDataset):
         # base method, intended to be subclassed
         # parse the version hash
         self.parameters["code version"] = self._get_code_version()
-        
+
         self._parse_inifile()
         self._parse_definitions_header()
         self._setup_geometry()
@@ -878,14 +880,14 @@ class PlutoXdmfDataset(PlutoStaticDataset):
     _dataset_type = "pluto-xdmf"
     _required_header_keyword = "PLUTOXdmf"
     _field_offset_index = {}  # TODO(clm): clean this up
-    
+
     def _read_data_header(self) -> str:
-        return ''
+        return ""
 
     def _parse_parameter_file(self):
         super()._parse_parameter_file()
         self.parameters["code version"] = self._get_code_version()
-        
+
         grid_file = os.path.join(self.directory, "grid.out")  # data-loc/grid.out
         (
             self.parameter_filename[:-2] + "xmf"
@@ -900,7 +902,7 @@ class PlutoXdmfDataset(PlutoStaticDataset):
             self.directory, self._default_definitions_header
         )
         if os.path.exists(self._default_definitions_header):
-            with open(self._default_definitions_header, 'r') as deftxt:
+            with open(self._default_definitions_header) as deftxt:
                 lines = deftxt.readlines()
                 for line in lines:
                     if "USER_DEF_PARAMETERS" in line:
@@ -917,7 +919,7 @@ class PlutoXdmfDataset(PlutoStaticDataset):
         These lines need to be parsed to create the appropriate grid data structure in yt.
         Splitting and extracting the numers become straightforward when '[', ']' and ',' characters are removed before the split.
         """
-        with open(grid_file, 'r') as gridtxt:
+        with open(grid_file) as gridtxt:
             txt = gridtxt.readlines()
             for line in txt:
                 if "# DIMENSIONS" in line:
@@ -952,7 +954,7 @@ class PlutoXdmfDataset(PlutoStaticDataset):
 
             self.geometry = self._parse_geometry(geom_str)
 
-        with open(out_file, 'r') as outttxt:
+        with open(out_file) as outttxt:
             txt = outttxt.readlines()
             """
             Filenames are data.<snapnum>.<dbl/flt>.h5
@@ -984,7 +986,7 @@ class PlutoXdmfDataset(PlutoStaticDataset):
         self.mu = 0.61
         self.storage_filename = self.parameter_filename
         self._periodicity = (True, True, True)
-        
+
     def _get_code_version(self) -> str:
         # take the last line of the header
         # Code version is read from grid.out
@@ -994,16 +996,16 @@ class PlutoXdmfDataset(PlutoStaticDataset):
         makrs the beginning and the end of header information
         """
         grid_file = os.path.join(self.directory, "grid.out")  # data-loc/grid.out
-        
-        if not(os.path.exists(grid_file)):
+
+        if not (os.path.exists(grid_file)):
             warnings.warn(
                 f"Could not determine code version from file header {header!r}"
             )
             return "unknown"
-            
+
         count = 0
-        version = ''
-        with open(grid_file, 'r') as gridtxt:
+        version = ""
+        with open(grid_file) as gridtxt:
             txt = gridtxt.readlines()
 
             for _start, line in enumerate(txt):
@@ -1031,7 +1033,7 @@ class PlutoXdmfDataset(PlutoStaticDataset):
         magnetic_unit = None
 
         if os.path.exists(self._default_definitions_header):
-            with open(self._default_definitions_header, 'r') as deftxt:
+            with open(self._default_definitions_header) as deftxt:
                 lines = deftxt.readlines()
                 for line in lines:
                     line = remove_comments(line)
@@ -1060,7 +1062,7 @@ class PlutoXdmfDataset(PlutoStaticDataset):
                     raise RuntimeError(
                         "pluto.ini file is needed for unit conversion but is missing!"
                     )
-                with open(self._default_inifile, 'r') as ini:
+                with open(self._default_inifile) as ini:
                     lines = ini.readlines()
                     for _pos, line in enumerate(lines):
                         if "[Parameters]" in line:
