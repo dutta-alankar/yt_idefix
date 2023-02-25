@@ -875,7 +875,6 @@ class PlutoXdmfDataset(PlutoStaticDataset):
     _field_info_class = PlutoXdmfFields
     _dataset_type = "pluto-xdmf"
     _required_header_keyword = "PLUTOXdmf"
-    _field_offset_index = {}  # TODO(clm): clean this up
 
     def _read_data_header(self) -> str:
         return ""
@@ -995,7 +994,7 @@ class PlutoXdmfDataset(PlutoStaticDataset):
 
         if not (os.path.exists(grid_file)):
             warnings.warn(
-                f"Could not determine code version from file header {header!r}"
+                f"Could not determine code version from file {grid_file}"
             )
             return "unknown"
 
