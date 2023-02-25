@@ -608,7 +608,13 @@ class PlutoStaticDataset(IdefixDataset):
         These lines need to be parsed to create the appropriate grid data structure in yt.
         Splitting and extracting the numers become straightforward when '[', ']' and ',' characters are removed before the split.
         """
-        self.grid_file = os.path.join(self.directory, "grid.out")  # data-loc/grid.out
+        if not (hasattr(self, "grid_file")):
+            self.grid_file = os.path.join(
+                self.directory, "grid.out"
+            )  # data-loc/grid.out
+        if not (os.path.exists(self.grid_file)):
+            warnings.warn(f"Could not determine code version from file {grid_file}")
+            return "unknown"
 
         with open(self.grid_file, "r") as fh:
             txt = fh.readlines()
@@ -620,7 +626,7 @@ class PlutoStaticDataset(IdefixDataset):
             domain_right_edge = np.zeros(self.dimensionality, dtype=np.float64)
             domain_dimensions = np.zeros(self.dimensionality, dtype=np.int64)
 
-            geom_str = None
+            geom_str = "cartesian"  # default
             count = 0
             for line in txt:
                 if ("# X1" in line) or ("# X2" in line) or ("# X3" in line):
@@ -698,16 +704,19 @@ class PlutoStaticDataset(IdefixDataset):
         # ***********
         makrs the beginning and the end of header information
         """
-        grid_file = os.path.join(self.directory, "grid.out")  # data-loc/grid.out
-
-        if not (os.path.exists(grid_file)):
+        if not (hasattr(self, "grid_file")):
+            self.grid_file = os.path.join(
+                self.directory, "grid.out"
+            )  # data-loc/grid.out
+        if not (os.path.exists(self.grid_file)):
             warnings.warn(f"Could not determine code version from file {grid_file}")
             return "unknown"
 
         count = 0
         version = ""
-        with open(grid_file) as gridtxt:
-            txt = gridtxt.readlines()
+
+        with open(self.grid_file, "r") as fh:
+            txt = fh.readlines()
 
             for _start, line in enumerate(txt):
                 if "# ***********" in line:
