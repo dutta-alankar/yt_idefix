@@ -558,18 +558,18 @@ class PlutoStaticDataset(IdefixDataset):
         )
         # PLUTO (non Chombo) does not support grid refinement
         self.refine_by = 1
-        
+
     def _read_data_header(self) -> str:
         return ""
-        
+
     def _parse_parameter_file(self):
         super()._parse_parameter_file()
         self._parse_definitions_header()
-        self._parse_gridfile() # The geometry set in definitions.h is overriden
-        
+        self._parse_gridfile()  # The geometry set in definitions.h is overriden
+
     def _parse_snapshot_time(self, out_file: str | os.PathLike[str]):
         # parse time from <dbl.h5/flt.h5/vtk>.out file
-        
+
         if (match := re.search(r"\.(\d*)\.", self.parameter_filename)) is None:
             raise RuntimeError(
                 f"Failed to parse output number from file name {self.parameter_filename}"
@@ -584,7 +584,7 @@ class PlutoStaticDataset(IdefixDataset):
             return
 
         log_regexp = re.compile(rf"^{index}\s(\S+)")
-        with open(out_file, 'r') as fh:
+        with open(out_file, "r") as fh:
             for line in fh.readlines():
                 log_match = re.search(log_regexp, line)
                 if log_match:
@@ -595,7 +595,7 @@ class PlutoStaticDataset(IdefixDataset):
                     "Failed to retrieve time from %s, setting current_time = -1",
                     out_file,
                 )
-                
+
     def _parse_gridfile(self) -> None:
         """
         grid.out file has entries like the following:
@@ -609,8 +609,8 @@ class PlutoStaticDataset(IdefixDataset):
         Splitting and extracting the numers become straightforward when '[', ']' and ',' characters are removed before the split.
         """
         self.grid_file = os.path.join(self.directory, "grid.out")  # data-loc/grid.out
-        
-        with open(self.grid_file, 'r') as fh:
+
+        with open(self.grid_file, "r") as fh:
             txt = fh.readlines()
             for line in txt:
                 if "# DIMENSIONS" in line:
@@ -619,7 +619,7 @@ class PlutoStaticDataset(IdefixDataset):
             domain_left_edge = np.zeros(self.dimensionality, dtype=np.float64)
             domain_right_edge = np.zeros(self.dimensionality, dtype=np.float64)
             domain_dimensions = np.zeros(self.dimensionality, dtype=np.int64)
-            
+
             geom_str = None
             count = 0
             for line in txt:
@@ -642,9 +642,9 @@ class PlutoStaticDataset(IdefixDataset):
             self.domain_left_edge = domain_left_edge
             self.domain_right_edge = domain_right_edge
             self.domain_dimensions = domain_dimensions
-            
+
             self.geometry = self._parse_geometry(geom_str)
-        
+
     def _parse_definitions_header(self) -> None:
         """Read some metadata from header file 'definitions.h'."""
         self.parameters["definitions"] = {}
@@ -655,7 +655,7 @@ class PlutoStaticDataset(IdefixDataset):
             )
             return
 
-        with open(self._definitions_header, 'r') as fh:
+        with open(self._definitions_header, "r") as fh:
             body = fh.read()
         lines = C_io.strip_comments(body).split("\n")
 
@@ -689,7 +689,7 @@ class PlutoStaticDataset(IdefixDataset):
         """Replace matched constant string with its value"""
         key = match.group()
         return str(pluto_def_constants[key])
-    
+
     def _get_code_version(self) -> str:
         # take the first line of the header
         # Code version is read from grid.out
@@ -717,7 +717,7 @@ class PlutoStaticDataset(IdefixDataset):
             _start += 1  # This is the first line of the header info lines in grid.out (version info is here)
             version = txt[_start].split()[2]
         return version
-        
+
     def _set_code_unit_attributes(self):
         """Conversion between physical units and code units."""
 
@@ -799,7 +799,8 @@ class PlutoStaticDataset(IdefixDataset):
         # we accept density_unit as a valid override
         "density_unit": "g/cm**3",
     }
-    
+
+
 class IdefixVtkDataset(IdefixDataset):
     _index_class = IdefixVtkHierarchy
     _field_info_class: type[BaseVtkFields] = IdefixVtkFields
@@ -1104,40 +1105,41 @@ class PlutoVtkDataset(IdefixVtkDataset):
 
         super(cls, cls)._validate_units_override_keys(units_override)
 
+
 class PlutoXdmfDataset(PlutoStaticDataset):
     _index_class = PlutoXdmfHierarchy
     _field_info_class = PlutoXdmfFields
     _dataset_type = "pluto-xdmf"
     _required_header_keyword = "PLUTOXdmf"
-    
+
     def _parse_parameter_file(self):
         """
-            Filenames are data.<snapnum>.<dbl/flt>.h5
-            <snapnum> needs to be parse from the filename.
-            <snapnum> is the corresponding entry in the <dbl/flt>.h5.out file
-            Example <dbl/flt>.h5.out file:
-                0 0.000000e+00 1.000000e-04 0 single_file little rho vx1 vx2 vx3 prs tr1 tr2 tr3 Temp ndens PbykB mach
-                1 2.498181e+00 3.500985e-03 747 single_file little rho vx1 vx2 vx3 prs tr1 tr2 tr3 Temp ndens PbykB mach
-                2 4.998045e+00 3.400969e-03 1458 single_file little rho vx1 vx2 vx3 prs tr1 tr2 tr3 Temp ndens PbykB mach
-                3 7.497932e+00 3.386245e-03 2186 single_file little rho vx1 vx2 vx3 prs tr1 tr2 tr3 Temp ndens PbykB mach
-                
-            One of these lines is parsed to count the number of passive tracer fields in the data dump.
+        Filenames are data.<snapnum>.<dbl/flt>.h5
+        <snapnum> needs to be parse from the filename.
+        <snapnum> is the corresponding entry in the <dbl/flt>.h5.out file
+        Example <dbl/flt>.h5.out file:
+            0 0.000000e+00 1.000000e-04 0 single_file little rho vx1 vx2 vx3 prs tr1 tr2 tr3 Temp ndens PbykB mach
+            1 2.498181e+00 3.500985e-03 747 single_file little rho vx1 vx2 vx3 prs tr1 tr2 tr3 Temp ndens PbykB mach
+            2 4.998045e+00 3.400969e-03 1458 single_file little rho vx1 vx2 vx3 prs tr1 tr2 tr3 Temp ndens PbykB mach
+            3 7.497932e+00 3.386245e-03 2186 single_file little rho vx1 vx2 vx3 prs tr1 tr2 tr3 Temp ndens PbykB mach
+
+        One of these lines is parsed to count the number of passive tracer fields in the data dump.
         """
         super()._parse_parameter_file()
-        self.xmf_file  = os.path.join(
-            self.directory,
-            self.parameter_filename[:-2] + "xmf" ) # data.%04d.<dbl/flt>.h5 -> data.%04d.<dbl/flt>.xmf
+        self.xmf_file = os.path.join(
+            self.directory, self.parameter_filename[:-2] + "xmf"
+        )  # data.%04d.<dbl/flt>.h5 -> data.%04d.<dbl/flt>.xmf
         self.parameters["code version"] = self._get_code_version()
-        
+
         out_file = os.path.join(
             self.directory,
             self.parameter_filename[-6:]
             + ".out",  # data.%04d.<dbl/flt>.h5 -> <dbl/flt>.h5.out
         )
-        
+
         self._parse_snapshot_time(out_file)
-        
-        with open(out_file, 'r') as fh:
+
+        with open(out_file, "r") as fh:
             txt = fh.readlines()
             entry = int(
                 os.path.basename(self.parameter_filename)
@@ -1145,20 +1147,20 @@ class PlutoXdmfDataset(PlutoStaticDataset):
                 .replace("data.", "")
                 .replace(".dbl.h5", "")
             )
-            
+
             self.ntracers = 0
             search = "tr1"  # Passive tracer names in PLUTO are tr1, tr2, tr3 and so on by default
             while search in txt[entry].split():
                 self.ntracers += 1
                 search = f"tr{self.ntracers + 1}"
-            
+
         # check g_gamma value in the simulation and change this if needed. Unfortunately, automating this is not trivial.
         self.gamma = 5.0 / 3.0
         # This is a ballpark number for fully ionized plasma. For more accuracy, say to obtain temperature, let PLUTO dump this field as a user-defined field.
         self.mu = 0.61
         self.storage_filename = self.parameter_filename
         self._periodicity = (True, True, True)
-        
+
     @classmethod
     def _is_valid(cls, filename, *args, **kwargs):
         # This accepts a filename or a set of arguments and returns True or
