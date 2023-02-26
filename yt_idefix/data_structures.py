@@ -23,7 +23,7 @@ from yt.utilities.lib.misc_utilities import (  # type: ignore [import]
 from yt.utilities.on_demand_imports import _h5py as h5py
 from yt_idefix._typing import UnitLike
 
-from ._io import C_io, dmp_io, vtk_io
+from ._io import C_io, dmp_io, vtk_io, h5_io
 from ._io.commons import IdefixFieldProperties, IdefixMetadata
 from .definitions import _PlutoBaseUnits, pluto_def_constants
 from .fields import (
@@ -169,13 +169,18 @@ class IdefixHierarchy(GridIndex, ABC):
 
 
 class IdefixVtkHierarchy(IdefixHierarchy):
+    _io_type = vtk_io
+
     def _get_field_offset_index(self) -> dict[str, int]:
         return self.ds._field_offset_index
 
     @cached_property
     def _cell_widths(self) -> tuple[XSpans, YSpans, ZSpans]:
+        print("test", self._io_type)
         with open(self.index_filename, "rb") as fh:
-            cell_edges = vtk_io.read_grid_coordinates(fh, geometry=self.ds.geometry)
+            cell_edges = self._io_type.read_grid_coordinates(
+                fh, geometry=self.ds.geometry
+            )
 
         dims = self.ds.domain_dimensions
         length_unit = self.ds.quan(1, "code_length")
@@ -197,7 +202,9 @@ class IdefixVtkHierarchy(IdefixHierarchy):
     @cached_property
     def _cell_centers(self) -> tuple[XCoords, YCoords, ZCoords]:
         with open(self.index_filename, "rb") as fh:
-            cell_edges = vtk_io.read_grid_coordinates(fh, geometry=self.ds.geometry)
+            cell_edges = self._io_type.read_grid_coordinates(
+                fh, geometry=self.ds.geometry
+            )
 
         dims = self.ds.domain_dimensions
         length_unit = self.ds.quan(1, "code_length")
@@ -243,7 +250,9 @@ class IdefixDmpHierarchy(IdefixHierarchy):
         )
 
 
-class PlutoXdmfHierarchy(IdefixHierarchy):
+class PlutoXdmfHierarchy(IdefixVtkHierarchy):
+    _io_type = h5_io
+
     def _get_field_offset_index(self) -> dict[str, int]:
         # TODO(clm): refactor class hierarchy so this unused method can be removed
         return {}
@@ -254,81 +263,6 @@ class PlutoXdmfHierarchy(IdefixHierarchy):
             self.field_list = [
                 (self.ds._dataset_type, str(k)) for k in list(h5f[f"{root}/vars/"])
             ]
-
-    def _parse_grid_data(self, gridtxt):
-        """
-        In grid.out
-        # ***********
-        makrs the beginning and the end of header information
-        """
-        count = 0
-        for _start, line in enumerate(gridtxt):
-            if "# ***********" in line:
-                count += 1
-            if count == 2:
-                break
-        _start += 1  # This is the first line after the header lines in grid.out
-        """
-        grid.out data has the following format
-        NX1
-        <count> <left-edge> <right-edge>
-          ...    ...          ... (NX1 rows)
-        NX2
-        <count> <left-edge> <right-edge>
-          ...    ...          ... (NX2 rows)
-        NX3
-        <count> <left-edge> <right-edge>
-          ...    ...          ... (NX3 rows)
-        """
-        # Beginning of the grid data
-        start = _start
-        nx1 = int(gridtxt[_start][:-1])
-        start += nx1 + 1
-        nx2 = int(gridtxt[start][:-1])
-        start += nx2 + 1
-        nx3 = int(gridtxt[start][:-1])
-
-        # Seek back to the beginning of the grid data
-        start = _start + 1
-        cell_width1 = np.array(
-            [
-                float(gridtxt[i].split()[-1]) - float(gridtxt[i].split()[-2])
-                for i in range(start, start + nx1)
-            ]
-        )
-        start += nx1 + 1
-        cell_width2 = np.array(
-            [
-                float(gridtxt[i].split()[-1]) - float(gridtxt[i].split()[-2])
-                for i in range(start, start + nx2)
-            ]
-        )
-        start += nx2 + 1
-        cell_width3 = np.array(
-            [
-                float(gridtxt[i].split()[-1]) - float(gridtxt[i].split()[-2])
-                for i in range(start, start + nx3)
-            ]
-        )
-        cell_widths = (cell_width1, cell_width2, cell_width3)
-        return cell_widths
-
-    @cached_property
-    def _cell_widths(self) -> tuple[XSpans, YSpans, ZSpans]:
-        grid_file = os.path.join(self.directory, "grid.out")
-        with open(grid_file) as gridtxt:
-            txt = gridtxt.readlines()
-            cell_widths = self._parse_grid_data(txt)
-        return cell_widths
-
-    @cached_property
-    def _cell_centers(self) -> tuple[XCoords, YCoords, ZCoords]:
-        cell_center1, cell_center2, cell_center3 = self._cell_widths
-        return (
-            cell_center1[0] + 0.5 * cell_center1,
-            cell_center2[0] + 0.5 * cell_center2,
-            cell_center3[0] + 0.5 * cell_center3,
-        )
 
 
 class IdefixDataset(Dataset, ABC):
@@ -558,6 +492,7 @@ class PlutoStaticDataset(IdefixDataset):
         )
         # PLUTO (non Chombo) does not support grid refinement
         self.refine_by = 1
+        self._periodicity = (True, True, True)
 
     def _read_data_header(self) -> str:
         return ""
@@ -565,7 +500,23 @@ class PlutoStaticDataset(IdefixDataset):
     def _parse_parameter_file(self):
         super()._parse_parameter_file()
         self._parse_definitions_header()
-        self._parse_gridfile()  # The geometry set in definitions.h is overriden
+        self.geometry = self._parse_geometry(self.parameters["definitions"]["geometry"])
+
+        # parse the grid
+        coords = h5_io.read_grid_coordinates(
+            self.parameter_filename, geometry=self.parameters["definitions"]["geometry"]
+        )
+
+        self.domain_dimensions = np.array(coords.array_shape)
+        self.dimensionality = np.count_nonzero(self.domain_dimensions - 1)
+
+        dle = np.array([arr.min() for arr in coords.arrays], dtype="float64")
+        dre = np.array([arr.max() for arr in coords.arrays], dtype="float64")
+
+        # temporary hack to prevent 0-width dimensions for 2D data
+        dre = np.where(dre == dle, dle + 1, dre)
+        self.domain_left_edge = dle
+        self.domain_right_edge = dre
 
     def _parse_snapshot_time(self, out_file: str | os.PathLike[str]):
         # parse time from <dbl.h5/flt.h5/vtk>.out file
@@ -595,63 +546,6 @@ class PlutoStaticDataset(IdefixDataset):
                     "Failed to retrieve time from %s, setting current_time = -1",
                     out_file,
                 )
-
-    def _parse_gridfile(self) -> None:
-        """
-        grid.out file has entries like the following:
-
-            # DIMENSIONS: 2
-            # GEOMETRY:   POLAR
-            # X1: [ 0.040000,  0.500000], 400 point(s), 2 ghosts
-            # X2: [ 0.000000,  6.283185], 400 point(s), 2 ghosts
-
-        These lines need to be parsed to create the appropriate grid data structure in yt.
-        Splitting and extracting the numers become straightforward when '[', ']' and ',' characters are removed before the split.
-        """
-        if not (hasattr(self, "grid_file")):
-            self.grid_file = os.path.join(
-                self.directory, "grid.out"
-            )  # data-loc/grid.out
-        if not (os.path.exists(self.grid_file)):
-            warnings.warn(
-                f"Could not determine code version from file {self.grid_file}"
-            )
-            return
-
-        with open(self.grid_file) as fh:
-            txt = fh.readlines()
-            for line in txt:
-                if "# DIMENSIONS" in line:
-                    self.dimensionality = int(line.split()[-1])
-                    break
-            domain_left_edge = np.zeros(self.dimensionality, dtype=np.float64)
-            domain_right_edge = np.zeros(self.dimensionality, dtype=np.float64)
-            domain_dimensions = np.zeros(self.dimensionality, dtype=np.int64)
-
-            geom_str = "cartesian"  # default
-            count = 0
-            for line in txt:
-                if ("# X1" in line) or ("# X2" in line) or ("# X3" in line):
-                    tmp = (
-                        line.replace(",", "").replace("[", "").replace("]", "").split()
-                    )
-                    domain_left_edge[count] = float(tmp[2])
-                    domain_right_edge[count] = float(tmp[3])
-                    domain_dimensions[count] = int(tmp[4])
-                    count += 1
-                if "# GEOMETRY" in line:
-                    geom_str = (line.split()[-1]).lower()
-            for i in range(
-                count, self.dimensionality
-            ):  # These are dummy, may need some fix
-                domain_left_edge[i] = 0.0
-                domain_right_edge[i] = 1.0
-                domain_dimensions[i] = 1
-            self.domain_left_edge = domain_left_edge
-            self.domain_right_edge = domain_right_edge
-            self.domain_dimensions = domain_dimensions
-
-            self.geometry = self._parse_geometry(geom_str)
 
     def _parse_definitions_header(self) -> None:
         """Read some metadata from header file 'definitions.h'."""
@@ -743,7 +637,7 @@ class PlutoStaticDataset(IdefixDataset):
         # Otherwise, they are set to the default values adopted in Pluto.
         # velocity_unit = km/s
         # density_unit = mp/cm**3
-        # length_unit = au
+        # length_unit = AU
         defs = self.parameters["definitions"]
         pluto_units = {
             "velocity_unit": self.quan(defs.get("velocity_unit", 1.0e5), "cm/s"),
@@ -1012,7 +906,7 @@ class PlutoVtkDataset(IdefixVtkDataset):
         # Otherwise, they are set to the default values adopted in Pluto.
         # velocity_unit = km/s
         # density_unit = mp/cm**3
-        # length_unit = au
+        # length_unit = AU
         defs = self.parameters["definitions"]
         pluto_units = {
             "velocity_unit": self.quan(defs.get("velocity_unit", 1.0e5), "cm/s"),
@@ -1172,7 +1066,6 @@ class PlutoXdmfDataset(PlutoStaticDataset):
         # This is a ballpark number for fully ionized plasma. For more accuracy, say to obtain temperature, let PLUTO dump this field as a user-defined field.
         self.mu = 0.61
         self.storage_filename = self.parameter_filename
-        self._periodicity = (True, True, True)
 
     @classmethod
     def _is_valid(cls, filename, *args, **kwargs):
@@ -1186,9 +1079,6 @@ class PlutoXdmfDataset(PlutoStaticDataset):
         )  # data.%04d.<dbl/flt>.h5 -> data.%04d.<dbl/flt>.xmf
         if not (test):
             return False
-        test = os.path.exists(
-            os.path.join(os.path.dirname(filename), "grid.out")
-        )  # data-loc/grid.out
         if not (test):
             return False
         test = os.path.exists(
