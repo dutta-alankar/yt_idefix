@@ -132,9 +132,7 @@ def read_grid_coordinates(
     geometry: str | None = None,
 ) -> Coordinates:
     # Return cell edges coordinates
-
     fh = h5py.File(filename, "r")
-
     if geometry not in (valid_geometries := tuple(KNOWN_GEOMETRIES.values())):
         raise ValueError(
             f"Got unknown geometry {geometry!r}, expected one of {valid_geometries}"
@@ -155,6 +153,50 @@ def read_grid_coordinates(
         coords = [pointsX, pointsY, pointsZ]
     else:
         assert geometry in ("polar", "spherical")
+
+        dimensions = len(np.array(nodesX).shape)
+        if dimensions == 1:
+            nodesX = np.array(
+                [
+                    [
+                        nodesX,
+                    ],
+                ]
+            )
+            nodesY = np.array(
+                [
+                    [
+                        nodesY,
+                    ],
+                ]
+            )
+            nodesZ = np.array(
+                [
+                    [
+                        nodesZ,
+                    ],
+                ]
+            )
+            array_shape = Shape(*shape).to_cell_centered()
+        elif dimensions == 2:
+            nodesX = np.array(
+                [
+                    nodesX,
+                ]
+            )
+            nodesY = np.array(
+                [
+                    nodesY,
+                ]
+            )
+            nodesZ = np.array(
+                [
+                    nodesZ,
+                ]
+            )
+            array_shape = Shape(*shape).to_cell_centered()
+        else:
+            array_shape = Shape(*reversed(shape)).to_cell_centered()
         ordering = (2, 1, 0)
 
         xcart = np.transpose(nodesX, ordering)
@@ -162,8 +204,6 @@ def read_grid_coordinates(
         zcart = np.transpose(nodesZ, ordering)
 
         coords = mapFromCart(xcart, ycart, zcart, geometry)
-
-    array_shape = Shape(*reversed(shape)).to_cell_centered()
     fh.close()
     return Coordinates(coords[0], coords[1], coords[2], array_shape)
 
