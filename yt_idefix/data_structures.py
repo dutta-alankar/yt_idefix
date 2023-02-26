@@ -23,7 +23,7 @@ from yt.utilities.lib.misc_utilities import (  # type: ignore [import]
 from yt.utilities.on_demand_imports import _h5py as h5py
 from yt_idefix._typing import UnitLike
 
-from ._io import C_io, dmp_io, vtk_io, h5_io
+from ._io import C_io, dmp_io, h5_io, vtk_io
 from ._io.commons import IdefixFieldProperties, IdefixMetadata
 from .definitions import _PlutoBaseUnits, pluto_def_constants
 from .fields import (
