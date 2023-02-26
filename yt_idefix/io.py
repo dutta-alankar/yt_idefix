@@ -130,7 +130,7 @@ class PlutoXdmfIOHandler(BaseIOHandler):
                         ftype, fname = field
                         position = f"/Timestep_{entry}/vars/{fname}"
                         field_data = fh[position][:].astype("=f8")
-                        print("debug ", np.array(field_data).shape)
+                        
                         dimensionality = len(field_data.shape)
                         if dimensionality == 1:
                             field_data = np.array(
