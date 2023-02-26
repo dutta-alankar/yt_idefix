@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import Any, BinaryIO, Dict, Literal, NamedTuple, Tuple
+from typing import Any, Dict, Literal, NamedTuple, Tuple
 
 import numpy as np
 
@@ -52,7 +52,6 @@ def mapFromCart(
     ycart: np.ndarray,
     zcart: np.ndarray,
     geometry: str,
-    fh: BinaryIO | None = None,
 ) -> list[np.ndarray]:
     shape = Shape(*xcart.shape)
 
@@ -64,10 +63,6 @@ def mapFromCart(
         r = np.sqrt(xcart[:, 0, 0] ** 2 + ycart[:, 0, 0] ** 2)
         theta = np.unwrap(np.arctan2(ycart[0, :, 0], xcart[0, :, 0]))
         z = zcart[0, 0, :]
-
-        if fh:
-            next(fh).decode().split()[0]  # CELL_DATA (NX-1)(NY-1)(NZ-1)
-            next(fh)
 
         coords = [r, theta, z]
     else:

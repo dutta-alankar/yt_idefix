@@ -191,7 +191,7 @@ def read_grid_coordinates(
         zcart.shape = rshape
         zcart = zcart.T
 
-        coords = mapFromCart(xcart, ycart, zcart, geometry, fh)
+        coords = mapFromCart(xcart, ycart, zcart, geometry)
 
         data_type = next(fh).decode().split()[0]  # CELL_DATA (NX-1)(NY-1)(NZ-1)
         next(fh)
