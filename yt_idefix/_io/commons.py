@@ -66,7 +66,7 @@ def mapFromCart(
         z = zcart[0, 0, :]
 
         if fh:
-            data_type = next(fh).decode().split()[0]  # CELL_DATA (NX-1)(NY-1)(NZ-1)
+            next(fh).decode().split()[0]  # CELL_DATA (NX-1)(NY-1)(NZ-1)
             next(fh)
 
         coords = [r, theta, z]

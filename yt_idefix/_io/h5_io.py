@@ -1,11 +1,12 @@
 from __future__ import annotations
 
+import os
 import struct
 import warnings
 from typing import Any, BinaryIO, Literal, overload
-import os
 
 import numpy as np
+
 from yt.utilities.on_demand_imports import _h5py as h5py
 
 from .commons import Coordinates, Shape, mapFromCart
@@ -126,40 +127,42 @@ def read_metadata(fh: BinaryIO) -> dict[str, Any]:
 
 
 def read_grid_coordinates(
-    filename: str | os.PathLike[str] ,
+    filename: str | os.PathLike[str],
     *,
     geometry: str | None = None,
 ) -> Coordinates:
     # Return cell edges coordinates
-    
-    fh = h5py.File(filename, 'r')
-    
+
+    fh = h5py.File(filename, "r")
+
     if geometry not in (valid_geometries := tuple(KNOWN_GEOMETRIES.values())):
         raise ValueError(
             f"Got unknown geometry {geometry!r}, expected one of {valid_geometries}"
         )
-    
-    nodesX = fh['/node_coords/X'].astype("=f8")
-    nodesY = fh['/node_coords/Y'].astype("=f8")
-    nodesZ = fh['/node_coords/Z'].astype("=f8")
-    shape = Shape(*np.array(nodesX).shape) # this is reversed compared the vtk implementation in vtk_io.py
+
+    nodesX = fh["/node_coords/X"].astype("=f8")
+    nodesY = fh["/node_coords/Y"].astype("=f8")
+    nodesZ = fh["/node_coords/Z"].astype("=f8")
+    shape = Shape(
+        *np.array(nodesX).shape
+    )  # this is reversed compared the vtk implementation in vtk_io.py
     coords: list[np.ndarray] = []
     # now assuming that fh is positioned at the end of metadata
-    if geometry in ("cartesian", "cylindrical"):        
-        pointsX = nodesX[0,0,:]
-        pointsY = nodesY[0,:,0]
-        pointsZ = nodesZ[:,0,0]
+    if geometry in ("cartesian", "cylindrical"):
+        pointsX = nodesX[0, 0, :]
+        pointsY = nodesY[0, :, 0]
+        pointsZ = nodesZ[:, 0, 0]
         coords = [pointsX, pointsY, pointsZ]
     else:
         assert geometry in ("polar", "spherical")
         ordering = (2, 1, 0)
-        
+
         xcart = np.transpose(nodesX, ordering)
         ycart = np.transpose(nodesY, ordering)
         zcart = np.transpose(nodesZ, ordering)
-        
+
         coords = mapFromCart(xcart, ycart, zcart, geometry)
-    
+
     array_shape = Shape(*reversed(shape)).to_cell_centered()
     fh.close()
     return Coordinates(coords[0], coords[1], coords[2], array_shape)
