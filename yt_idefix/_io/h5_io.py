@@ -141,20 +141,39 @@ def read_grid_coordinates(
     nodesX = fh["/node_coords/X"].astype("=f8")
     nodesY = fh["/node_coords/Y"].astype("=f8")
     nodesZ = fh["/node_coords/Z"].astype("=f8")
+    dimensions = len(np.array(nodesX).shape)
     shape = Shape(
         *np.array(nodesX).shape
     )  # this is reversed compared the vtk implementation in vtk_io.py
     coords: list[np.ndarray] = []
     # now assuming that fh is positioned at the end of metadata
     if geometry in ("cartesian", "cylindrical"):
-        pointsX = nodesX[0, 0, :]
-        pointsY = nodesY[0, :, 0]
-        pointsZ = nodesZ[:, 0, 0]
-        coords = [pointsX, pointsY, pointsZ]
+        if dimensions == 1:
+            nodesX = np.array(nodesX)
+            if geometry == "cartesian":
+                nodesY = np.array([0.0, 1.0])
+                nodesZ = np.array([0.0, 1.0])
+            else:
+                nodesY = np.array([0.0, 1.0])
+                nodesZ = np.array([0.0, 2 * np.pi])
+            array_shape = Shape(shape[0], 1, 1).to_cell_centered()
+        elif dimensions == 2:
+            nodesX = np.array(nodesX[0, :])
+            nodesY = np.array(nodesY[:, 0])
+            if geometry == "cartesian":
+                nodesZ = np.array([0.0, 1.0])
+            else:
+                nodesZ = np.array([0.0, 2 * np.pi])
+            array_shape = Shape(*reversed(shape[:-1]), 1).to_cell_centered()
+        else:
+            nodesX = np.array(nodesX)[0, 0, :]
+            nodesY = np.array(nodesY)[0, :, 0]
+            nodesZ = np.array(nodesZ)[:, 0, 0]
+            array_shape = Shape(*reversed(shape)).to_cell_centered()
+        coords = [nodesX, nodesY, nodesZ]
     else:
         assert geometry in ("polar", "spherical")
 
-        dimensions = len(np.array(nodesX).shape)
         if dimensions == 1:
             nodesX = np.array(
                 [
@@ -177,7 +196,7 @@ def read_grid_coordinates(
                     ],
                 ]
             )
-            array_shape = Shape(*shape).to_cell_centered()
+            array_shape = Shape(shape[0], 1, 1).to_cell_centered()
         elif dimensions == 2:
             nodesX = np.array(
                 [
@@ -194,7 +213,7 @@ def read_grid_coordinates(
                     nodesZ,
                 ]
             )
-            array_shape = Shape(*shape).to_cell_centered()
+            array_shape = Shape(*reversed(shape[:-1]), 1).to_cell_centered()
         else:
             array_shape = Shape(*reversed(shape)).to_cell_centered()
         ordering = (2, 1, 0)
