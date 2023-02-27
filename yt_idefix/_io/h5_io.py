@@ -147,15 +147,25 @@ def read_grid_coordinates(
     )  # this is reversed compared the vtk implementation in vtk_io.py
     coords: list[np.ndarray] = []
     # now assuming that fh is positioned at the end of metadata
-    if geometry in ("cartesian", "cylindrical"):
+    if geometry in ("cartesian", "cylindrical") or (
+        geometry in ("polar", "spherical") and dimensions == 1
+    ):
         if dimensions == 1:
             nodesX = np.array(nodesX)
-            if geometry == "cartesian":
-                nodesY = np.array([0.0, 1.0])
-                nodesZ = np.array([0.0, 1.0])
-            else:
-                nodesY = np.array([0.0, 1.0])
-                nodesZ = np.array([0.0, 2 * np.pi])
+            nodesY = np.array(
+                [0.0, 1.0]
+            )  # Default is assumed and not parsed from pluto.ini/grid.out (not present in data)
+            nodesZ = np.array([0.0, 1.0])
+            if geometry == "spherical":
+                if np.fabs(np.max(nodesX) - np.min(nodesX)) < 1e-8:
+                    nodesX = fh["/cell_coords/X"].astype("=f8")
+                    nodesX = np.hstack(([nodesX[1] - nodesX[0]], np.array(nodesX)))
+                    nodesX = np.array(nodesX) / np.sin(0.5)
+            elif geometry == "polar":
+                if np.fabs(np.max(nodesX) - np.min(nodesX)) < 1e-8:
+                    nodesX = fh["/cell_coords/X"].astype("=f8")
+                    nodesX = np.hstack(([nodesX[1] - nodesX[0]], np.array(nodesX)))
+                    nodesX = np.array(nodesX) / np.cos(0.5)
             array_shape = Shape(shape[0], 1, 1).to_cell_centered()
         elif dimensions == 2:
             nodesX = np.array(nodesX[0, :])
@@ -171,33 +181,8 @@ def read_grid_coordinates(
             nodesZ = np.array(nodesZ)[:, 0, 0]
             array_shape = Shape(*reversed(shape)).to_cell_centered()
         coords = [nodesX, nodesY, nodesZ]
-    else:
-        assert geometry in ("polar", "spherical")
-
-        if dimensions == 1:
-            nodesX = np.array(
-                [
-                    [
-                        nodesX,
-                    ],
-                ]
-            )
-            nodesY = np.array(
-                [
-                    [
-                        nodesY,
-                    ],
-                ]
-            )
-            nodesZ = np.array(
-                [
-                    [
-                        nodesZ,
-                    ],
-                ]
-            )
-            array_shape = Shape(shape[0], 1, 1).to_cell_centered()
-        elif dimensions == 2:
+    elif geometry in ("polar", "spherical") and dimensions > 1:
+        if dimensions == 2:
             nodesX = np.array(
                 [
                     nodesX,

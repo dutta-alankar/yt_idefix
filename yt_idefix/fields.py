@@ -74,6 +74,10 @@ class PlutoXdmfFields(FieldInfoContainer):
     def setup_fluid_fields(self):
         unit_system = self.ds.unit_system
 
+        setup_magnetic_field_aliases(
+            self, self.ds._dataset_type, [f"BX{idir}" for idir in "123"]
+        )
+
         # Add tracer fields
         for i in range(1, self.ds.ntracers + 1):
             if (self.ds._dataset_type, "tr%d" % i) in self.field_list:
