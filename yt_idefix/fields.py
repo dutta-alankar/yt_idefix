@@ -23,11 +23,23 @@ class IdefixVtkFields(BaseVtkFields):
         setup_magnetic_field_aliases(
             self, "idefix-vtk", [f"BX{idir}" for idir in "123"]
         )
+        for idir in "123":
+            self.alias(
+                ("gas", f"BX{idir}"),
+                ("idefix-vtk", f"BX{idir}"),
+                units="code_magnetic",
+            )
 
 
 class PlutoVtkFields(BaseVtkFields):
     def setup_fluid_fields(self):
         setup_magnetic_field_aliases(self, "pluto-vtk", [f"BX{idir}" for idir in "123"])
+        for idir in "123":
+            self.alias(
+                ("gas", f"BX{idir}"),
+                ("pluto-vtk", f"BX{idir}"),
+                units="code_magnetic",
+            )
 
 
 class IdefixDmpFields(FieldInfoContainer):
@@ -50,6 +62,12 @@ class IdefixDmpFields(FieldInfoContainer):
         setup_magnetic_field_aliases(
             self, "idefix-dmp", [f"Vc-BX{idir}" for idir in "123"]
         )
+        for idir in "123":
+            self.alias(
+                ("gas", f"Vc-BX{idir}"),
+                ("idefix-dmp", f"Vc-BX{idir}"),
+                units="code_magnetic",
+            )
 
 
 class PlutoXdmfFields(FieldInfoContainer):
@@ -67,6 +85,9 @@ class PlutoXdmfFields(FieldInfoContainer):
         ("vx2", (_vel_units, ["vel_y"], None)),
         ("vx3", (_vel_units, ["vel_z"], None)),
         ("prs", (_pres_units, ["prs", "pres", "pressure"], None)),
+        ("Bx1", ("code_magnetic", [], None)),
+        ("Bx2", ("code_magnetic", [], None)),
+        ("Bx3", ("code_magnetic", [], None)),
     )
 
     known_particle_fields = ()
@@ -75,8 +96,14 @@ class PlutoXdmfFields(FieldInfoContainer):
         unit_system = self.ds.unit_system
 
         setup_magnetic_field_aliases(
-            self, self.ds._dataset_type, [f"BX{idir}" for idir in "123"]
+            self, self.ds._dataset_type, [f"Bx{idir}" for idir in "123"]
         )
+        for idir in "123":
+            self.alias(
+                ("gas", f"BX{idir}"),
+                (self.ds._dataset_type, f"Bx{idir}"),
+                units="code_magnetic",
+            )
 
         # Add tracer fields
         for i in range(1, self.ds.ntracers + 1):

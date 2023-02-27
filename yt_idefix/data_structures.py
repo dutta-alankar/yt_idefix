@@ -176,7 +176,6 @@ class IdefixVtkHierarchy(IdefixHierarchy):
 
     @cached_property
     def _cell_widths(self) -> tuple[XSpans, YSpans, ZSpans]:
-        print("test", self._io_type)
         with open(self.index_filename, "rb") as fh:
             cell_edges = self._io_type.read_grid_coordinates(
                 fh, geometry=self.ds.geometry

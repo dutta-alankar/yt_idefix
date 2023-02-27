@@ -100,7 +100,6 @@ class PlutoXdmfIOHandler(BaseIOHandler):
         raise NotImplementedError("Reading of particle fields not yet implemented!")
 
     def _read_fluid_selection(self, chunks, selector, fields, size):
-        data = {}
         """
         Filenames are data.<snapnum>.<dbl/flt>.h5
         <snapnum> needs to be parse from the filename.
@@ -117,7 +116,7 @@ class PlutoXdmfIOHandler(BaseIOHandler):
             .replace("data.", "")
             .replace(".dbl.h5", "")
         )
-
+        data = {}
         for field in fields:
             data[field] = np.empty(size, dtype="float64")
 
