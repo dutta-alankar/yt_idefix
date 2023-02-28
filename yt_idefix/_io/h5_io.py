@@ -1,9 +1,7 @@
 from __future__ import annotations
 
 import os
-import struct
-import warnings
-from typing import Any, BinaryIO, Literal, overload
+from typing import BinaryIO
 
 import numpy as np
 
