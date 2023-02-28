@@ -6,7 +6,7 @@ from more_itertools import distinct_combinations
 from unyt import Unit, assert_allclose_units
 
 import yt
-from yt_idefix.api import PlutoStaticDataset, PlutoXdmfDataset
+from yt_idefix.api import PlutoXdmfDataset
 
 # A sample list of units for test.
 # The first three values are chosen randomly
