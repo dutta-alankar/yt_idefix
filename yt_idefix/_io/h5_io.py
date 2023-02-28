@@ -174,7 +174,7 @@ def read_grid_coordinates(
                 nodesZ = np.array([0.0, 1.0])
             else:
                 nodesZ = np.array([0.0, 2 * np.pi])
-            array_shape = Shape(*reversed(shape[:-1]), 1).to_cell_centered()
+            array_shape = Shape((*reversed(shape[:-1]), 1)).to_cell_centered()
         else:
             nodesX = np.array(nodesX)[0, 0, :]
             nodesY = np.array(nodesY)[0, :, 0]
@@ -198,7 +198,7 @@ def read_grid_coordinates(
                     nodesZ,
                 ]
             )
-            array_shape = Shape(*reversed(shape[:-1]), 1).to_cell_centered()
+            array_shape = Shape((*reversed(shape[:-1]), 1)).to_cell_centered()
         else:
             array_shape = Shape(*reversed(shape)).to_cell_centered()
         ordering = (2, 1, 0)
