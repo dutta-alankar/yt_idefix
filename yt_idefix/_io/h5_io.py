@@ -18,6 +18,7 @@ KNOWN_GEOMETRIES: dict[int, str] = {
     3: "cylindrical",
 }
 
+
 def read_grid_coordinates(
     filename: str | os.PathLike[str],
     *,
