@@ -4,7 +4,7 @@ attrs:
   has_geometry: true
   geometry: cartesian
   dimensionality: 1
-  kind: pluto
+  kind: plutoVTK
   current_time:
   has_units: false
   units:

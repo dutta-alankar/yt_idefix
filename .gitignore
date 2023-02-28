@@ -3,3 +3,5 @@
 **/__pycache__
 dist/*
 venv/*
+tests/data/pluto_disk_cgm_icm/*
+tests/data/pluto_orszag_tang/*

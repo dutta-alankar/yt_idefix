@@ -1070,18 +1070,18 @@ class PlutoXdmfDataset(PlutoStaticDataset):
     def _is_valid(cls, filename, *args, **kwargs):
         # This accepts a filename or a set of arguments and returns True or
         # False depending on if the file is of the type requested.
-        test = filename.endswith("dbl.h5") or filename.endswith("flt.h5")
+        test = str(filename).endswith("dbl.h5") or str(filename).endswith("flt.h5")
         if not (test):
             return False
         test = os.path.exists(
-            filename[:-2] + "xmf"
+            str(filename)[:-2] + "xmf"
         )  # data.%04d.<dbl/flt>.h5 -> data.%04d.<dbl/flt>.xmf
         if not (test):
             return False
         if not (test):
             return False
         test = os.path.exists(
-            os.path.join(os.path.dirname(filename), filename[-6:] + ".out")
+            os.path.join(os.path.dirname(filename), str(filename)[-6:] + ".out")
         )  # data.%04d.<dbl/flt>.h5 -> <dbl/flt>.h5.out
         if not (test):
             return False

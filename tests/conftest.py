@@ -28,6 +28,7 @@ def pytest_configure(config):
 DATA_DIR = Path(__file__).parent / "data"
 
 VTK_FILES: dict[str, dict[str, Any]] = {}
+XDMF_FILES: dict[str, dict[str, Any]] = {}
 
 
 def load_meta(pdir, meta_file):
@@ -46,14 +47,18 @@ def load_meta(pdir, meta_file):
 
 for ddir in os.listdir(DATA_DIR):
     pdir = DATA_DIR / ddir
-    meta_file = pdir / "meta.yaml"
-    if not pdir.is_dir():
-        continue
-    if not meta_file.is_file():
-        continue
-
-    metadata = load_meta(pdir, meta_file)
-    VTK_FILES.update({metadata["id"]: metadata["attrs"]})
+    for filename in os.listdir(pdir):
+        if filename.startswith("meta") and filename.endswith(".yaml"):
+            meta_file = pdir / filename
+            if not pdir.is_dir():
+                continue
+            if not meta_file.is_file():
+                continue
+            metadata = load_meta(pdir, meta_file)
+            if "XDMF" in metadata["attrs"]["kind"]:
+                XDMF_FILES.update({metadata["id"]: metadata["attrs"]})
+            else:
+                VTK_FILES.update({metadata["id"]: metadata["attrs"]})
 
 
 @pytest.fixture(params=VTK_FILES.values(), ids=VTK_FILES.keys(), scope="session")
@@ -61,9 +66,18 @@ def vtk_file(request):
     return request.param
 
 
+@pytest.fixture(params=XDMF_FILES.values(), ids=XDMF_FILES.keys(), scope="session")
+def xdmf_file(request):
+    return request.param
+
+
 # useful subsets
 VTK_FILES_NO_GEOMETRY = {
     k: v for k, v in VTK_FILES.items() if v["has_geometry"] is False
+}
+
+XDMF_FILES_NO_GEOMETRY = {
+    k: v for k, v in XDMF_FILES.items() if v["has_geometry"] is False
 }
 
 
@@ -76,8 +90,21 @@ def vtk_file_no_geom(request):
     return request.param
 
 
+@pytest.fixture(
+    params=XDMF_FILES_NO_GEOMETRY.values(),
+    ids=XDMF_FILES_NO_GEOMETRY.keys(),
+    scope="session",
+)
+def xdmf_file_no_geom(request):
+    return request.param
+
+
 VTK_FILES_WITH_GEOMETRY = {
     k: v for k, v in VTK_FILES.items() if v["has_geometry"] is True
+}
+
+XDMF_FILES_WITH_GEOMETRY = {
+    k: v for k, v in XDMF_FILES.items() if v["has_geometry"] is True
 }
 
 
@@ -90,7 +117,18 @@ def vtk_file_with_geom(request):
     return request.param
 
 
+@pytest.fixture(
+    params=XDMF_FILES_WITH_GEOMETRY.values(),
+    ids=XDMF_FILES_WITH_GEOMETRY.keys(),
+    scope="session",
+)
+def xdmf_file_with_geom(request):
+    return request.param
+
+
 VTK_FILES_WITH_UNITS = {k: v for k, v in VTK_FILES.items() if v["has_units"] is True}
+
+XDMF_FILES_WITH_UNITS = {k: v for k, v in XDMF_FILES.items() if v["has_units"] is True}
 
 
 @pytest.fixture(
@@ -99,6 +137,15 @@ VTK_FILES_WITH_UNITS = {k: v for k, v in VTK_FILES.items() if v["has_units"] is 
     scope="session",
 )
 def vtk_file_with_units(request):
+    return request.param
+
+
+@pytest.fixture(
+    params=XDMF_FILES_WITH_UNITS.values(),
+    ids=XDMF_FILES_WITH_UNITS.keys(),
+    scope="session",
+)
+def xdmf_file_with_units(request):
     return request.param
 
 
@@ -112,11 +159,19 @@ def idefix_vtk_file(request):
     return request.param
 
 
-PLUTO_VTK_FILES = {k: v for k, v in VTK_FILES.items() if v["kind"] == "pluto"}
+PLUTO_VTK_FILES = {k: v for k, v in VTK_FILES.items() if v["kind"] == "plutoVTK"}
+PLUTO_XDMF_FILES = {k: v for k, v in VTK_FILES.items() if v["kind"] == "plutoXDMF"}
 
 
 @pytest.fixture(
     params=PLUTO_VTK_FILES.values(), ids=PLUTO_VTK_FILES.keys(), scope="session"
 )
 def pluto_vtk_file(request):
+    return request.param
+
+
+@pytest.fixture(
+    params=PLUTO_XDMF_FILES.values(), ids=PLUTO_XDMF_FILES.keys(), scope="session"
+)
+def pluto_xdmf_file(request):
     return request.param

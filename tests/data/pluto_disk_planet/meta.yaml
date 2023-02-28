@@ -4,7 +4,7 @@ attrs:
   has_geometry: true
   geometry: spherical
   dimensionality: 3
-  kind: pluto
+  kind: plutoVTK
   has_units: true
   units:
     length: 7.77909038e13 cm

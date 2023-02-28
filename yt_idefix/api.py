@@ -5,5 +5,8 @@ from .data_structures import (
     IdefixGrid,
     IdefixVtkDataset,
     IdefixVtkHierarchy,
+    PlutoXdmfHierarchy,
+    PlutoStaticDataset,
     PlutoVtkDataset,
+    PlutoXdmfDataset,
 )

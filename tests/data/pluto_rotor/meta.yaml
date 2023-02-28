@@ -4,7 +4,7 @@ attrs:
   has_geometry: true
   geometry: polar
   dimensionality: 2
-  kind: pluto
+  kind: plutoVTK
   has_units: false
   units:
     length: 1.49597892e+13 cm
