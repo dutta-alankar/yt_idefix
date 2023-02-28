@@ -103,34 +103,3 @@ def read_grid_coordinates(
         coords = mapFromCart(xcart, ycart, zcart, geometry)
     fh.close()
     return Coordinates(coords[0], coords[1], coords[2], array_shape)
-
-
-def read_field_offset_index(fh: BinaryIO, shape: Shape) -> dict[str, int]:
-    # assuming fh is correctly positioned (read_grid_coordinates must be called first)
-    retv: dict[str, int] = {}
-
-    while True:
-        line = fh.readline()
-        if len(line) < 2:
-            break
-        s = line.decode()
-        datatype, varname, dtype = s.split()
-
-        # some versions of Pluto define field names in lower case
-        # so we normalize to upper case to avoid duplicating data
-        # in IdefixVtkFieldInfo.known_other_fields
-        varname = varname.upper()
-
-        if datatype == "SCALARS":
-            next(fh)
-            retv[varname] = fh.tell()
-            read_single_field(fh, shape=shape, skip_data=True)
-        elif datatype == "VECTORS":
-            for axis in "XYZ":
-                vname = f"{varname}_{axis}"
-                retv[vname] = fh.tell()
-                read_single_field(fh, shape=shape, skip_data=True)
-        else:
-            raise RuntimeError(f"Unknown datatype {datatype!r}")
-        fh.readline()
-    return retv
