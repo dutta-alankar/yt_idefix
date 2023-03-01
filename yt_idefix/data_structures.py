@@ -8,7 +8,7 @@ import weakref
 from abc import ABC, abstractmethod
 from functools import cached_property
 from pathlib import Path
-from typing import TYPE_CHECKING, Final, Literal
+from typing import TYPE_CHECKING, Any, Final, Literal
 
 import inifix
 import numpy as np
@@ -17,6 +17,7 @@ from yt.data_objects.index_subobjects.stretched_grid import StretchedGrid
 from yt.data_objects.static_output import Dataset
 from yt.funcs import setdefaultattr
 from yt.geometry.grid_geometry_handler import GridIndex
+from yt.utilities.chemical_formulas import compute_mu
 from yt.utilities.lib.misc_utilities import (  # type: ignore [import]
     _obtain_coords_and_widths,
 )
@@ -480,6 +481,7 @@ class PlutoStaticDataset(IdefixDataset):
         | None = None,
         inifile: str | os.PathLike[str] | None = None,
         definitions_header: str | os.PathLike[str] | None = None,
+        parameters: dict[str, Any] = None,
     ):
         dt = type(self)._dataset_type
         super().__init__(
@@ -492,6 +494,7 @@ class PlutoStaticDataset(IdefixDataset):
         # PLUTO (non Chombo) does not support grid refinement
         self.refine_by = 1
         self._periodicity = (True, True, True)
+        self.parameters["specified_parameters"] = parameters
 
     def _read_data_header(self) -> str:
         return ""
@@ -516,6 +519,11 @@ class PlutoStaticDataset(IdefixDataset):
         dre = np.where(dre == dle, dle + 1, dre)
         self.domain_left_edge = dle
         self.domain_right_edge = dre
+
+        self.gamma = self.parameters["specified_parameters"].get("gamma", 5.0 / 3.0)
+        self.mu = self.parameters["specified_parameters"].get(
+            "mu", compute_mu(self.default_species_fields)
+        )
 
     def _parse_snapshot_time(self, out_file: str | os.PathLike[str]):
         # parse time from <dbl.h5/flt.h5/vtk>.out file
@@ -1060,10 +1068,6 @@ class PlutoXdmfDataset(PlutoStaticDataset):
                 self.ntracers += 1
                 search = f"tr{self.ntracers + 1}"
 
-        # check g_gamma value in the simulation and change this if needed. Unfortunately, automating this is not trivial.
-        self.gamma = 5.0 / 3.0
-        # This is a ballpark number for fully ionized plasma. For more accuracy, say to obtain temperature, let PLUTO dump this field as a user-defined field.
-        self.mu = 0.61
         self.storage_filename = self.parameter_filename
 
     @classmethod
