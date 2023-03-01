@@ -6,7 +6,7 @@ from typing import Any, BinaryIO, Literal, overload
 
 import numpy as np
 
-from .commons import Coordinates, Shape, mapFromCart
+from .commons import Coordinates, Shape, get_native_coordinates_from_cartesian
 
 KNOWN_GEOMETRIES: dict[int, str] = {
     0: "cartesian",
@@ -191,7 +191,7 @@ def read_grid_coordinates(
         zcart.shape = rshape
         zcart = zcart.T
 
-        coords = mapFromCart(xcart, ycart, zcart, geometry)
+        coords = get_native_coordinates_from_cartesian(xcart, ycart, zcart, geometry)
 
         data_type = next(fh).decode().split()[0]  # CELL_DATA (NX-1)(NY-1)(NZ-1)
         next(fh)

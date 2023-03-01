@@ -47,7 +47,7 @@ class Coordinates(NamedTuple):
         return Coordinates(arrs[0], arrs[1], arrs[2], self.array_shape)
 
 
-def mapFromCart(
+def get_native_coordinates_from_cartesian(
     xcart: np.ndarray,
     ycart: np.ndarray,
     zcart: np.ndarray,
@@ -65,8 +65,7 @@ def mapFromCart(
         z = zcart[0, 0, :]
 
         coords = [r, theta, z]
-    else:
-        assert geometry == "spherical"
+    elif geometry == "spherical":
         # Reconstruct the spherical coordinate system
         if shape.n3 == 1:
             r = np.sqrt(xcart[:, 0, 0] ** 2 + ycart[:, 0, 0] ** 2)
@@ -91,7 +90,10 @@ def mapFromCart(
                 )
             )
         coords = [r, theta, phi]
-
+    else:
+        raise NotImplementedError(
+            f"This kind of geometry: {geometry} is not supported yet!"
+        )
     return coords
 
 

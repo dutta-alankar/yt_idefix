@@ -43,6 +43,7 @@ dependencies = [
 IdefixDmpkDataset = "yt_idefix.api:IdefixDmpDataset"
 IdefixVtkDataset = "yt_idefix.api:IdefixVtkDataset"
 PlutoVtkDataset = "yt_idefix.api:PlutoVtkDataset"
+PlutoXdmfDataset = "yt_idefix.api:PlutoXdmfDataset"
 
 [project.license]
 text = "GPL-3.0"

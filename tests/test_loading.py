@@ -25,7 +25,10 @@ def test_load_from_parent_str():
     # https://github.com/neutrinoceros/yt_idefix/issues/88
     os.chdir(ds_path.parent)
     fn = os.path.join("..", ds_path.parent.name, ds_path.name)
-    PlutoVtkDataset(fn)
+    if str(ds_path.name).endswith(".vtk"):
+        PlutoVtkDataset(fn)
+    elif str(ds_path.name).endswith(".h5"):
+        PlutoXdmfDataset(fn)
 
 
 @pytest.mark.skipif(
@@ -39,4 +42,7 @@ def test_load_from_parent_str():
 def test_load_from_home_str():
     # https://github.com/neutrinoceros/yt_idefix/issues/91
     fn = os.path.join("~", ds_path.relative_to(Path.home()))
-    PlutoVtkDataset(fn)
+    if str(fn).endswith(".vtk"):
+        PlutoVtkDataset(fn)
+    elif str(fn).endswith(".h5"):
+        PlutoXdmfDataset(fn)

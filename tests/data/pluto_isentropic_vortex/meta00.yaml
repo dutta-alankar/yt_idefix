@@ -5,7 +5,8 @@ attrs:
   geometry: cartesian
   dimensionality: 2
   kind: plutoVTK
-  has_units: true
+  has_units: false
+  current_time: 1.000000e+02
   units:
     length: 1.4959789200000e+13 cm
     velocity: 1.0 km/s

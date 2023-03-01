@@ -6,7 +6,7 @@ import numpy as np
 
 from yt.utilities.on_demand_imports import _h5py as h5py
 
-from .commons import Coordinates, Shape, mapFromCart
+from .commons import Coordinates, Shape, get_native_coordinates_from_cartesian
 
 KNOWN_GEOMETRIES: dict[int, str] = {
     0: "cartesian",
@@ -73,30 +73,17 @@ def read_grid_coordinates(
         coords = [nodesX, nodesY, nodesZ]
     elif geometry in ("polar", "spherical") and dimensions > 1:
         if dimensions == 2:
-            nodesX = np.array(
-                [
-                    nodesX,
-                ]
-            )
-            nodesY = np.array(
-                [
-                    nodesY,
-                ]
-            )
-            nodesZ = np.array(
-                [
-                    nodesZ,
-                ]
-            )
+            nodesX = np.array([nodesX])
+            nodesY = np.array([nodesY])
+            nodesZ = np.array([nodesZ])
             array_shape = Shape(*reversed(shape[:-1])).to_cell_centered()
         else:
             array_shape = Shape(*reversed(shape)).to_cell_centered()
-        ordering = (2, 1, 0)
 
-        xcart = np.transpose(nodesX, ordering)
-        ycart = np.transpose(nodesY, ordering)
-        zcart = np.transpose(nodesZ, ordering)
+        xcart = np.transpose(nodesX, axes=(2, 1, 0))
+        ycart = np.transpose(nodesY, axes=(2, 1, 0))
+        zcart = np.transpose(nodesZ, axes=(2, 1, 0))
 
-        coords = mapFromCart(xcart, ycart, zcart, geometry)
+        coords = get_native_coordinates_from_cartesian(xcart, ycart, zcart, geometry)
     fh.close()
     return Coordinates(coords[0], coords[1], coords[2], array_shape)

@@ -120,7 +120,7 @@ class PlutoXdmfIOHandler(BaseIOHandler):
         for field in fields:
             data[field] = np.empty(size, dtype="float64")
 
-        with h5py.File(self.ds.parameter_filename, "r") as fh:
+        with h5py.File(self.ds.filename, "r") as fh:
             ind = 0
             for chunk in chunks:
                 for grid in chunk.objs:
@@ -132,22 +132,11 @@ class PlutoXdmfIOHandler(BaseIOHandler):
 
                         dimensionality = len(field_data.shape)
                         if dimensionality == 1:
-                            field_data = np.array(
-                                [
-                                    [
-                                        field_data,
-                                    ],
-                                ]
-                            )
+                            field_data = np.array([[field_data]])
                         elif dimensionality == 2:
-                            field_data = np.array(
-                                [
-                                    field_data,
-                                ]
-                            )
-                        ordering = (2, 1, 0)
+                            field_data = np.array([field_data])
                         # X3 X2 X1 orderding of fields in PLUTO needs to rearranged to X1 X2 X3 order in yt.
-                        values = np.transpose(field_data, ordering)
+                        values = np.transpose(field_data, axes=(2, 1, 0))
                         nd = grid.select(selector, values, data[field], ind)
                     ind += nd
         return data
