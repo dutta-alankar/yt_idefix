@@ -175,7 +175,7 @@ class PlutoXdmfFields(FieldInfoContainer):
             units=_vel_units,
         )
 
-        if not ((self.ds._dataset_type, "ndens") in self.field_list):
+        if (self.ds._dataset_type, "ndens") not in self.field_list:
 
             def _ndens(field, data):
                 return data["gas", "density"] / (data.ds.mu * mh)

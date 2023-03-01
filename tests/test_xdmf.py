@@ -1,9 +1,4 @@
-import os
-import re
 
-import pytest
-from more_itertools import distinct_combinations
-from unyt import Unit, assert_allclose_units
 
 import yt
 from yt_idefix.api import PlutoXdmfDataset
