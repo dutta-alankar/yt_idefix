@@ -114,7 +114,7 @@ class PlutoXdmfFields(FieldInfoContainer):
                     units="",
                 )
                 self.alias(
-                    ("gas", f"tracer_{i}" % i),
+                    ("gas", f"tracer_{i}"),
                     (self.ds._dataset_type, f"tr{i}"),
                     units="",
                 )
