@@ -33,6 +33,7 @@ def test_load_from_parent_str():
     fn = os.path.join("..", ds_path_plutoXDMF.parent.name, ds_path_plutoXDMF.name)
     PlutoXdmfDataset(fn)
 
+
 @pytest.mark.skipif(
     sys.version_info < (3, 9)
     or not ds_path_plutoVTK.is_relative_to(Path.home())
