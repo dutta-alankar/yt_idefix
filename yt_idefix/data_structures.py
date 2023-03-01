@@ -17,7 +17,6 @@ from yt.data_objects.index_subobjects.stretched_grid import StretchedGrid
 from yt.data_objects.static_output import Dataset
 from yt.funcs import setdefaultattr
 from yt.geometry.grid_geometry_handler import GridIndex
-from yt.utilities.chemical_formulas import compute_mu
 from yt.utilities.lib.misc_utilities import (  # type: ignore [import]
     _obtain_coords_and_widths,
 )
@@ -520,10 +519,10 @@ class PlutoStaticDataset(IdefixDataset):
         self.domain_left_edge = dle
         self.domain_right_edge = dre
 
-        self.gamma = self.parameters["specified_parameters"].get("gamma", 5.0 / 3.0)
-        self.mu = self.parameters["specified_parameters"].get(
-            "mu", compute_mu(self.default_species_fields)
-        )
+        if "gamma" in self.parameters["specified_parameters"]:
+            self.gamma = float(self.parameters["specified_parameters"].get("gamma"))
+        if "mu" in self.parameters["specified_parameters"]:
+            self.mu = float(self.parameters["specified_parameters"].get("mu"))
 
     def _parse_snapshot_time(self, out_file: str | os.PathLike[str]):
         # parse time from <dbl.h5/flt.h5/vtk>.out file
