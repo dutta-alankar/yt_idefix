@@ -1,5 +1,3 @@
-
-
 import yt
 from yt_idefix.api import PlutoXdmfDataset
 

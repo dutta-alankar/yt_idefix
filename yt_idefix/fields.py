@@ -172,7 +172,7 @@ class PlutoXdmfFields(FieldInfoContainer):
             ("gas", "sound_speed"),
             sampling_type="cell",
             function=_sound_speed,
-            units=_vel_units,
+            units=unit_system["velocity"],
         )
 
         if (self.ds._dataset_type, "ndens") not in self.field_list:
