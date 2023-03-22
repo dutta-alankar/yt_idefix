@@ -10,7 +10,9 @@
 [![Code style: black](https://img.shields.io/badge/code%20style-black-000000.svg)](https://github.com/psf/black)
 [![Ruff](https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/charliermarsh/ruff/main/assets/badge/v1.json)](https://github.com/charliermarsh/ruff)
 
-A maturing yt frontend for Idefix and Pluto (vtk), packaged as an extension for yt.
+A maturing yt frontend for Idefix and Pluto (vtk), packaged as an extension for yt. 
+
+Pluto `xdmf (.h5+.xmf)` output is now supported from version 1.1.0. However, this requires the `h5py` library to be installed.
 
 ## Installation
 
